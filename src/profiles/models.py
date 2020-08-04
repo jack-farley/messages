@@ -2,10 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.shortcuts import reverse
 
-
-def get_profile(profile_id):
-    profile = Profile.objects.filter(id=profile_id).first()
-    return profile
+from .shortcuts import get_profile_or_404
 
 
 # Create your models here.
@@ -14,12 +11,12 @@ class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
 
     relationships = models.ManyToManyField('self', through='Relationship', symmetrical=False,
-                                           related_name='related_to+')
+                                           related_name='related_to')
     friend_requests = models.ManyToManyField('self', through='FriendRequest', symmetrical=False,
                                              related_name='incoming_requests')
 
     def get_absolute_url(self):
-        return reverse('profiles:profile-detail', kwargs={'id': self.id})
+        return reverse('profiles:profile-detail', kwargs={'username': self.user.username})
 
     # RELATIONSHIPS
 
@@ -34,22 +31,22 @@ class Profile(models.Model):
     def get_friends(self):
         return self.get_relationships(1)
 
-    def is_blocked_by(self, profile_id):
-        other_profile = get_profile(id)
-        if self.get_related_to(2).contains(other_profile):
+    def is_blocked_by(self, username):
+        other_profile = get_profile_or_404(username)
+        if self.get_related_to(2).filter(id=other_profile.id).exists():
             return True
         return False
 
-    def is_blocking(self, profile_id):
-        other_profile = get_profile(id)
-        if self.get_relationships(2).contains(other_profile):
+    def is_blocking(self, username):
+        other_profile = get_profile_or_404(username)
+        if self.get_relationships(2).filter(id=other_profile.id).exists():
             return True
         return False
 
-    def is_friends_with(self, profile_id):
-        other_profile = get_profile(id)
+    def is_friends_with(self, username):
+        other_profile = get_profile_or_404(username)
         friends = self.get_friends()
-        if friends.contains(other_profile):
+        if friends.filter(id=other_profile.id).exists():
             return True
         return False
 
@@ -76,22 +73,22 @@ class Profile(models.Model):
             user.remove_relationship(self, status, False)
         return
 
-    def block(self, profile_id):
-        other_profile = get_profile(profile_id)
-        if self.is_friends_with(profile_id):
+    def block(self, username):
+        other_profile = get_profile_or_404(username)
+        if self.is_friends_with(username):
             self.remove_relationship(other_profile, 1)
         self.add_relationship(other_profile, 2, False)
 
-    def unblock(self, profile_id):
-        other_profile = get_profile(profile_id)
+    def unblock(self, username):
+        other_profile = get_profile_or_404(username)
         self.remove_relationship(other_profile, 2, False)
 
-    def add_friend(self, profile_id):
-        other_profile = get_profile(profile_id)
+    def add_friend(self, username):
+        other_profile = get_profile_or_404(username)
         self.add_relationship(other_profile, 1)
 
-    def remove_friend(self, profile_id):
-        other_profile = get_profile(profile_id)
+    def remove_friend(self, username):
+        other_profile = get_profile_or_404(username)
         self.remove_relationship(other_profile, 2)
 
     # FRIEND REQUESTS
@@ -101,17 +98,18 @@ class Profile(models.Model):
     def get_incoming_requests(self):
         self.incoming_requests.filter(senders__status=3, senders__to_profile=self)
 
-    def has_pending_request_to(self, profile_id):
-        other_profile = get_profile(profile_id)
-        if self.friend_requests.filter(receivers__status=3, receivers__from_profile=self).contains(other_profile):
+    def has_pending_request_to(self, username):
+        other_profile = get_profile_or_404(username)
+        pending_requests = self.friend_requests.filter(receivers__status=3, receivers__from_profile=self)
+        if pending_requests.filter(id=other_profile.id).exists():
             return True
         return False
 
     # Interacting with friend requests
 
-    def send_request(self, profile_id):
-        other_profile = get_profile(profile_id)
-        if not self.get_friends().contains(other_profile) and not self.is_blocked_by(other_profile):
+    def send_request(self, username):
+        other_profile = get_profile_or_404(username)
+        if not self.get_friends().filter(id=other_profile.id).exists() and not self.is_blocked_by(username):
             request, created = FriendRequest.objects.get_or_create(
                 from_profile=self,
                 to_profile=other_profile,
@@ -120,23 +118,23 @@ class Profile(models.Model):
             return request
         return None
 
-    def cancel_request(self, profile_id):
-        other_profile = get_profile(profile_id)
+    def cancel_request(self, username):
+        other_profile = get_profile_or_404(username)
         request = FriendRequest.objects.filter(from_profile=self, to_profile=other_profile, status=3).first()
         if request is not None:
             request.status = 4
         return request
 
-    def approve_request(self, profile_id):
-        other_profile = get_profile(profile_id)
+    def approve_request(self, username):
+        other_profile = get_profile_or_404(username)
         request = FriendRequest.objects.filter(from_profile=other_profile, to_profile=self, status=3).first()
         if request is not None:
             request.status = 1
-            self.add_friend(profile_id)
+            self.add_friend(username)
         return request
 
-    def deny_request(self, profile_id):
-        other_profile = get_profile(profile_id)
+    def deny_request(self, username):
+        other_profile = get_profile_or_404(username)
         request = FriendRequest.objects.filter(from_profile=other_profile, to_profile=self, status=3).first()
         if request is not None:
             request.status = 2
