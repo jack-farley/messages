@@ -13,8 +13,6 @@ def get_profile(profile_id):
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
 
-    birthdate = models.DateTimeField(null=True)
-
     relationships = models.ManyToManyField('self', through='Relationship', symmetrical=False,
                                            related_name='related_to+')
     friend_requests = models.ManyToManyField('self', through='FriendRequest', symmetrical=False,
