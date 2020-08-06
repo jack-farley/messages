@@ -4,12 +4,6 @@
 
 <h1>Friends</h1>
 
-{% if user.username == current_profile.user.username %}
-
-<p><a href="{% url 'profiles:add-friends' user.username %}">Add Friends</a></p>
-
-{% endif %}
-
 {% for instance in object_list %}
 
 <p><a href="{{ instance.get_absolute_url }}"></a>{{ instance.user.username }}</p>

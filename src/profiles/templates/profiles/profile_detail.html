@@ -6,6 +6,24 @@
 
 <p>Username - {{ object.user.username }}</p>
 
-<p><a href="{% url 'profiles:friends-list' object.user.username %}">Friends</a></p>
+<p><a href="{% url 'profiles:friends-list' object.user.username %}">{{ object.user.username }}'s Friends</a></p>
+
+{% if is_user %}
+{% elif friends_with_user %}
+<p>Friends</p>
+
+{% elif pending_request_from_user %}
+<p>Request Sent</p>
+
+{% else %}
+<form action="{% url 'profiles:friend-request' object.user.username %}" method="POST">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ request.path }}">
+    <button type="submit">Add Friend</button>
+</form>
+
+{% endif %}
+
+
 
 {% endblock %}

@@ -2,12 +2,8 @@
 
 {% block content %}
 
-    {% if user.is_authenticated %}
-        <h>User: {{ user.get_username }}</h>
-        <li><a href="{% url 'logout' %}?next={% url 'login' %}">Logout</a></li>
-    {% else %}
-        <li><a href="{% url 'login' %}?next={{ request.path }}">Login</a></li>
-    {% endif %}
+    <h>User: {{ user.get_username }}</h>
+    <p><a href="{% url 'logout' %}?next={% url 'login' %}">Logout</a></p>
 
     {% block user_content %}
     {% endblock %}

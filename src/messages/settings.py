@@ -40,7 +40,6 @@ INSTALLED_APPS = [
 
     # maybe should be 'profiles.apps.CoreConfig' ?
     'profiles.apps.ProfileConfig',
-    'pages'
 ]
 
 MIDDLEWARE = [

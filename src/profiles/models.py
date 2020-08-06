@@ -31,22 +31,19 @@ class Profile(models.Model):
     def get_friends(self):
         return self.get_relationships(1)
 
-    def is_blocked_by(self, username):
-        other_profile = get_profile_or_404(username)
-        if self.get_related_to(2).filter(id=other_profile.id).exists():
+    def is_blocked_by(self, profile):
+        if self.get_related_to(2).filter(id=profile.id).exists():
             return True
         return False
 
-    def is_blocking(self, username):
-        other_profile = get_profile_or_404(username)
-        if self.get_relationships(2).filter(id=other_profile.id).exists():
+    def is_blocking(self, profile):
+        if self.get_relationships(2).filter(id=profile.id).exists():
             return True
         return False
 
-    def is_friends_with(self, username):
-        other_profile = get_profile_or_404(username)
+    def is_friends_with(self, profile):
         friends = self.get_friends()
-        if friends.filter(id=other_profile.id).exists():
+        if friends.filter(id=profile.id).exists():
             return True
         return False
 
@@ -54,42 +51,38 @@ class Profile(models.Model):
 
     # Creating, updating, or removing relationships relationships
 
-    def add_relationship(self, user, status, symmetric=True):
+    def add_relationship(self, profile, status, symmetric=True):
         relationship, created = Relationship.objects.get_or_create(
             from_profile=self,
-            to_profile=user,
+            to_profile=profile,
             status=status
         )
         if symmetric:
-            user.add_relationship(self, status, False)
+            profile.add_relationship(self, status, False)
         return relationship
 
-    def remove_relationship(self, user, status, symmetric=True):
+    def remove_relationship(self, profile, status, symmetric=True):
         Relationship.objects.filter(
             from_profile=self,
-            to_profile=user,
+            to_profile=profile,
             status=status).delete()
         if symmetric:
-            user.remove_relationship(self, status, False)
+            profile.remove_relationship(self, status, False)
         return
 
-    def block(self, username):
-        other_profile = get_profile_or_404(username)
-        if self.is_friends_with(username):
-            self.remove_relationship(other_profile, 1)
-        self.add_relationship(other_profile, 2, False)
+    def block(self, profile):
+        if self.is_friends_with(profile):
+            self.remove_relationship(profile, 1)
+        self.add_relationship(profile, 2, False)
 
-    def unblock(self, username):
-        other_profile = get_profile_or_404(username)
-        self.remove_relationship(other_profile, 2, False)
+    def unblock(self, profile):
+        self.remove_relationship(profile, 2, False)
 
-    def add_friend(self, username):
-        other_profile = get_profile_or_404(username)
-        self.add_relationship(other_profile, 1)
+    def add_friend(self, profile):
+        self.add_relationship(profile, 1)
 
-    def remove_friend(self, username):
-        other_profile = get_profile_or_404(username)
-        self.remove_relationship(other_profile, 2)
+    def remove_friend(self, profile):
+        self.remove_relationship(profile, 2)
 
     # FRIEND REQUESTS
 
@@ -98,44 +91,40 @@ class Profile(models.Model):
     def get_incoming_requests(self):
         self.incoming_requests.filter(senders__status=3, senders__to_profile=self)
 
-    def has_pending_request_to(self, username):
-        other_profile = get_profile_or_404(username)
+    def has_pending_request_to(self, profile):
         pending_requests = self.friend_requests.filter(receivers__status=3, receivers__from_profile=self)
-        if pending_requests.filter(id=other_profile.id).exists():
+        if pending_requests.filter(id=profile.id).exists():
             return True
         return False
 
     # Interacting with friend requests
 
-    def send_request(self, username):
-        other_profile = get_profile_or_404(username)
-        if not self.get_friends().filter(id=other_profile.id).exists() and not self.is_blocked_by(username):
+    def send_request(self, profile):
+        if not self.get_friends().filter(id=profile.id).exists() and not self.is_blocked_by(profile) \
+                and not self.has_pending_request_to(profile):
             request, created = FriendRequest.objects.get_or_create(
                 from_profile=self,
-                to_profile=other_profile,
+                to_profile=profile,
                 status=3,
             )
             return request
         return None
 
-    def cancel_request(self, username):
-        other_profile = get_profile_or_404(username)
-        request = FriendRequest.objects.filter(from_profile=self, to_profile=other_profile, status=3).first()
+    def cancel_request(self, profile):
+        request = FriendRequest.objects.filter(from_profile=self, to_profile=profile, status=3).first()
         if request is not None:
             request.status = 4
         return request
 
-    def approve_request(self, username):
-        other_profile = get_profile_or_404(username)
-        request = FriendRequest.objects.filter(from_profile=other_profile, to_profile=self, status=3).first()
+    def approve_request(self, profile):
+        request = FriendRequest.objects.filter(from_profile=profile, to_profile=self, status=3).first()
         if request is not None:
             request.status = 1
-            self.add_friend(username)
+            self.add_friend(profile)
         return request
 
-    def deny_request(self, username):
-        other_profile = get_profile_or_404(username)
-        request = FriendRequest.objects.filter(from_profile=other_profile, to_profile=self, status=3).first()
+    def deny_request(self, profile):
+        request = FriendRequest.objects.filter(from_profile=profile, to_profile=self, status=3).first()
         if request is not None:
             request.status = 2
         return request
