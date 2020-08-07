@@ -2,7 +2,6 @@ from django.shortcuts import render, redirect, reverse
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth import login, authenticate
-from django.http import HttpResponseRedirect
 from django.views import View
 
 from django.views.generic import (
@@ -31,7 +30,7 @@ class UserCreateView(AnonymousRequiredMixin, CreateView):
         new_user = authenticate(username=form.cleaned_data['username'],
                                 password=form.cleaned_data['password1'])
         login(self.request, new_user)
-        return HttpResponseRedirect(self.get_success_url())
+        return redirect(self.get_success_url())
 
 
 class MyProfileView(LoginRequiredMixin, View):
@@ -70,40 +69,51 @@ class FriendsListView(LoginRequiredMixin, View):
         return self.get_current_profile().get_friends()
 
     def get(self, request, *args, **kwargs):
-        context = {'current_profile': self.get_current_profile(), 'object_list': self.get_queryset()}
+        context = {'object_list': self.get_queryset()}
         return render(request, self.template_name, context)
 
 
 class SendFriendRequestView(LoginRequiredMixin, View):
 
+    def post(self, request, username):
+        profile = self.request.user.profile
+        other_profile = get_profile_or_404(username)
+
+        # check if there is already a pending request
+        profile.send_request(other_profile)
+
+        next_url = self.request.POST.get('next', '')
+        if next_url is None:
+            return redirect(reverse('profiles:profile-detail', kwargs={'username': username}))
+        return redirect(next_url)
+
+
+class RequestsListView(LoginRequiredMixin, View):
+    template_name = 'friends/requests_list.html'
+
+    def get_queryset(self):
+        return self.request.user.profile.get_incoming_pending()
+
+    def get(self, request, *args, **kwargs):
+        if self.kwargs.get('username') != self.request.user.username:
+            redirect(reverse('profiles:incoming-requests', kwargs={'username': self.request.user.username}))
+        context = {'object_list': self.get_queryset()}
+        return render(request, self.template_name, context)
+
+
+class AcceptFriendRequestView(LoginRequiredMixin, View):
 
     def post(self, request, username):
-        user = request.user
+        profile = self.request.user.profile
         other_profile = get_profile_or_404(username)
-        user.profile.send_request(other_profile)
-        next_url = request.POST.get('next', '')
+
+        if profile.has_pending_request_from(other_profile):
+            profile.approve_request(other_profile)
+
+        next_url = self.request.POST.get('next', '')
         if next_url is None:
-            return HttpResponseRedirect(reverse('profiles:profile-detail', kwargs={'username': username}))
-        return HttpResponseRedirect(next_url)
+            return redirect(reverse('profiles:friends-list', kwargs={'username': self.request.user.username}))
+        return redirect(next_url)
 
-
-# class SendFriendRequestView(LoginRequiredMixin, FormView):
-#     template_name = 'friends/add_friends.html'
-#     form_class = FriendRequestForm
-#
-#     def get_form_kwargs(self):
-#         kwargs = super(SendFriendRequestView, self).get_form_kwargs()
-#         kwargs.update({'user': self.request.user})
-#         return kwargs
-#
-#     def get_success_url(self):
-#         return reverse('profiles:friends-list', kwargs={'username': self.request.user.username})
-#
-#     def form_valid(self, form):
-#         username = form.cleaned_data['username']
-#         self.request.user.profile.send_request(username)
-#         return super().form_valid(form)
-
-
-class FindProfile(LoginRequiredMixin, FormView):
-    template_name = 'profiles/find_profiles.html'
+# class FindProfile(LoginRequiredMixin, FormView):
+#     template_name = 'profiles/find_profiles.html'

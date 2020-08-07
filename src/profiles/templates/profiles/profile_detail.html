@@ -16,7 +16,7 @@
 <p>Request Sent</p>
 
 {% else %}
-<form action="{% url 'profiles:friend-request' object.user.username %}" method="POST">
+<form action="{% url 'profiles:send-request' object.user.username %}" method="POST">
     {% csrf_token %}
     <input type="hidden" name="next" value="{{ request.path }}">
     <button type="submit">Add Friend</button>

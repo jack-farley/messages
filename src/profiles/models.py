@@ -52,6 +52,9 @@ class Profile(models.Model):
     # Creating, updating, or removing relationships relationships
 
     def add_relationship(self, profile, status, symmetric=True):
+        if self == profile:
+            return None
+
         relationship, created = Relationship.objects.get_or_create(
             from_profile=self,
             to_profile=profile,
@@ -73,13 +76,23 @@ class Profile(models.Model):
     def block(self, profile):
         if self.is_friends_with(profile):
             self.remove_relationship(profile, 1)
+
+        if self.has_pending_request_to(profile):
+            self.cancel_request(profile)
+
+        if profile.has_pending_request_to(self):
+            self.deny_request(profile)
+
         self.add_relationship(profile, 2, False)
 
     def unblock(self, profile):
         self.remove_relationship(profile, 2, False)
 
     def add_friend(self, profile):
-        self.add_relationship(profile, 1)
+        if not self.is_blocking(profile) \
+                and not self.is_blocked_by(profile) \
+                and not self.is_friends_with(profile):
+            self.add_relationship(profile, 1)
 
     def remove_friend(self, profile):
         self.remove_relationship(profile, 2)
@@ -87,47 +100,62 @@ class Profile(models.Model):
     # FRIEND REQUESTS
 
     # Getting information about friend requests
+    def get_incoming_requests(self, status):
+        return self.incoming_requests.filter(senders__status=status, senders__to_profile=self)
 
-    def get_incoming_requests(self):
-        self.incoming_requests.filter(senders__status=3, senders__to_profile=self)
+    def get_outgoing_requests(self, status):
+        return self.friend_requests.filter(receivers__status=status, receivers__from_profile=self)
+
+    def get_incoming_pending(self):
+        return self.get_incoming_requests(3)
 
     def has_pending_request_to(self, profile):
-        pending_requests = self.friend_requests.filter(receivers__status=3, receivers__from_profile=self)
-        if pending_requests.filter(id=profile.id).exists():
+        outgoing_pending = self.get_outgoing_requests(3)
+        if outgoing_pending.filter(id=profile.id).exists():
+            return True
+        return False
+
+    def has_pending_request_from(self, profile):
+        incoming_pending = self.get_incoming_pending()
+        if incoming_pending.filter(id=profile.id).exists():
             return True
         return False
 
     # Interacting with friend requests
 
     def send_request(self, profile):
-        if not self.get_friends().filter(id=profile.id).exists() and not self.is_blocked_by(profile) \
-                and not self.has_pending_request_to(profile):
+        if profile == self:
+            return None
+
+        if not self.is_friends_with(profile) \
+                and not self.is_blocked_by(profile) \
+                and not self.is_blocking(profile) \
+                and not self.has_pending_request_to(profile)\
+                and not self.has_pending_request_from(profile):
             request, created = FriendRequest.objects.get_or_create(
                 from_profile=self,
                 to_profile=profile,
                 status=3,
             )
-            return request
-        return None
 
     def cancel_request(self, profile):
         request = FriendRequest.objects.filter(from_profile=self, to_profile=profile, status=3).first()
         if request is not None:
             request.status = 4
-        return request
+            request.save()
 
     def approve_request(self, profile):
         request = FriendRequest.objects.filter(from_profile=profile, to_profile=self, status=3).first()
         if request is not None:
             request.status = 1
+            request.save()
             self.add_friend(profile)
-        return request
 
     def deny_request(self, profile):
         request = FriendRequest.objects.filter(from_profile=profile, to_profile=self, status=3).first()
         if request is not None:
             request.status = 2
-        return request
+            request.save()
 
 
 RELATIONSHIP_FRIENDS = 1

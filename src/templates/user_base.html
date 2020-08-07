@@ -2,10 +2,14 @@
 
 {% block content %}
 
-    <h>User: {{ user.get_username }}</h>
-    <p><a href="{% url 'logout' %}?next={% url 'login' %}">Logout</a></p>
+<p>User: <a href="{% url 'profiles:my-profile' %}">{{ user.get_username }}</a></p>
 
-    {% block user_content %}
-    {% endblock %}
+<p> <a href="{% url 'profiles:friends-list' user.username %}">Friends</a></p>
+<p> <a href="{% url 'profiles:requests-list' user.username %}">Requests</a></p>
+
+<p><a href="{% url 'logout' %}?next={% url 'login' %}">Logout</a></p>
+
+{% block user_content %}
+{% endblock %}
 
 {% endblock %}
