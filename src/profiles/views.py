@@ -72,6 +72,20 @@ class FriendsListView(LoginRequiredMixin, View):
         return render(request, self.template_name, context)
 
 
+class RemoveFriendView(LoginRequiredMixin, View):
+
+    def post(self, request, username):
+        profile = self.request.user.profile
+        other_profile = get_profile_or_404(username)
+
+        profile.remove_friend(other_profile)
+
+        next_url = self.request.POST.get('next', '')
+        if next_url is None:
+            return redirect(reverse('profiles:friends-list', kwargs={'username': profile.user.username}))
+        return redirect(next_url)
+
+
 class SendFriendRequestView(LoginRequiredMixin, View):
 
     def post(self, request, username):
@@ -113,6 +127,3 @@ class AcceptFriendRequestView(LoginRequiredMixin, View):
         if next_url is None:
             return redirect(reverse('profiles:friends-list', kwargs={'username': self.request.user.username}))
         return redirect(next_url)
-
-# class FindProfile(LoginRequiredMixin, FormView):
-#     template_name = 'profiles/find_profiles.html'
