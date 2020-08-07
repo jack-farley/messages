@@ -7,7 +7,6 @@ from django.views import View
 from django.views.generic import (
     DetailView,
     CreateView,
-    FormView,
 )
 
 from .models import Profile

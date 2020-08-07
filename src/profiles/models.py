@@ -1,14 +1,12 @@
 from django.db import models
-from django.contrib.auth.models import User
+from django.conf import settings
 from django.shortcuts import reverse
-
-from .shortcuts import get_profile_or_404
 
 
 # Create your models here.
 
 class Profile(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='profile')
 
     relationships = models.ManyToManyField('self', through='Relationship', symmetrical=False,
                                            related_name='related_to')
