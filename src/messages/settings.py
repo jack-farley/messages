@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/3.0/ref/settings/
 """
 
 import os
+import datetime
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -38,7 +39,11 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
-    # maybe should be 'profiles.apps.CoreConfig' ?
+    # Third-Pary Apps
+    'rest_framework',
+
+    # Local Apps
+    'accounts',
     'profiles.apps.ProfileConfig',
 ]
 
@@ -123,6 +128,20 @@ USE_TZ = True
 STATIC_URL = '/static/'
 
 
-# Redirect to home URL after login (Default redirects to /accounts/profile/)
-LOGIN_REDIRECT_URL = '/'
-LOGIN_URL = '/accounts/login/'
+AUTH_USER_MODEL = 'accounts.User'
+
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    )
+}
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': datetime.timedelta(minutes=5),
+    'REFRESH_TOKEN_LIFETIME': datetime.timedelta(days=1),
+    'USER_ID_CLAIM': 'id',
+}
+
+

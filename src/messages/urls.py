@@ -15,11 +15,9 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-from profiles.views import UserCreateView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('accounts/', include('django.contrib.auth.urls')),
-    path('accounts/create/', UserCreateView.as_view(), name='user-create'),
-    path('', include('profiles.urls')),
+    path('profiles/', include('profiles.urls')),
+    path('accounts/', include('accounts.urls')),
 ]

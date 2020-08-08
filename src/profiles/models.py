@@ -1,3 +1,5 @@
+import uuid
+
 from django.db import models
 from django.conf import settings
 from django.shortcuts import reverse
@@ -6,25 +8,40 @@ from django.shortcuts import reverse
 # Create your models here.
 
 class Profile(models.Model):
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='profile')
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name='profile')
 
-    relationships = models.ManyToManyField('self', through='Relationship', symmetrical=False,
-                                           related_name='related_to')
-    friend_requests = models.ManyToManyField('self', through='FriendRequest', symmetrical=False,
-                                             related_name='incoming_requests')
+    relationships = models.ManyToManyField(
+        'self', through='Relationship', symmetrical=False,
+        related_name='related_to')
+    friend_requests = models.ManyToManyField(
+        'self', through='FriendRequest', symmetrical=False,
+        related_name='incoming_requests')
+
+    def __str__(self):
+        return f'{self.get_username()}'
 
     def get_absolute_url(self):
-        return reverse('profiles:profile-detail', kwargs={'username': self.user.username})
+        return reverse('profiles:profiles-detail',
+                       kwargs={'username': self.get_username()})
+
+    def get_username(self):
+        return self.user.username
 
     # RELATIONSHIPS
 
     # Getting information about relationships
 
     def get_relationships(self, status):
-        return self.relationships.filter(to_profiles__status=status, to_profiles__from_profile=self)
+        return self.relationships.filter(
+            to_profiles__status=status,
+            to_profiles__from_profile=self)
 
     def get_related_to(self, status):
-        return self.related_to.filter(from_profiles__status=status, from_profiles__to_profile=self)
+        return self.related_to.filter(
+            from_profiles__status=status,
+            from_profiles__to_profile=self)
 
     def get_friends(self):
         return self.get_relationships(1)
@@ -99,10 +116,14 @@ class Profile(models.Model):
 
     # Getting information about friend requests
     def get_incoming_requests(self, status):
-        return self.incoming_requests.filter(senders__status=status, senders__to_profile=self)
+        return self.incoming_requests.filter(
+            senders__status=status,
+            senders__to_profile=self)
 
     def get_outgoing_requests(self, status):
-        return self.friend_requests.filter(receivers__status=status, receivers__from_profile=self)
+        return self.friend_requests.filter(
+            receivers__status=status,
+            receivers__from_profile=self)
 
     def get_incoming_pending(self):
         return self.get_incoming_requests(3)
@@ -137,54 +158,75 @@ class Profile(models.Model):
             )
 
     def cancel_request(self, profile):
-        request = FriendRequest.objects.filter(from_profile=self, to_profile=profile, status=3).first()
+        request = FriendRequest.objects.filter(
+            from_profile=self,
+            to_profile=profile,
+            status=3).first()
         if request is not None:
             request.status = 4
             request.save()
 
     def approve_request(self, profile):
-        request = FriendRequest.objects.filter(from_profile=profile, to_profile=self, status=3).first()
+        request = FriendRequest.objects.filter(
+            from_profile=profile,
+            to_profile=self,
+            status=3).first()
         if request is not None:
             request.status = 1
             request.save()
             self.add_friend(profile)
 
     def deny_request(self, profile):
-        request = FriendRequest.objects.filter(from_profile=profile, to_profile=self, status=3).first()
+        request = FriendRequest.objects.filter(
+            from_profile=profile,
+            to_profile=self,
+            status=3).first()
         if request is not None:
             request.status = 2
             request.save()
 
 
-RELATIONSHIP_FRIENDS = 1
-RELATIONSHIP_BLOCKED = 2
-RELATIONSHIP_STATUSES = (
-    (RELATIONSHIP_FRIENDS, 'Friends'),
-    (RELATIONSHIP_BLOCKED, 'Blocked'),
-)
-
-
 class Relationship(models.Model):
+    RELATIONSHIP_FRIENDS = 1
+    RELATIONSHIP_BLOCKED = 2
+    RELATIONSHIP_STATUSES = (
+        (RELATIONSHIP_FRIENDS, 'Friends'),
+        (RELATIONSHIP_BLOCKED, 'Blocked'),
+    )
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
     created = models.DateTimeField(auto_now_add=True, editable=False)
-    from_profile = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name='from_profiles')
-    to_profile = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name='to_profiles')
+
+    from_profile = models.ForeignKey(
+        Profile, on_delete=models.CASCADE, related_name='from_profiles')
+
+    to_profile = models.ForeignKey(
+        Profile, on_delete=models.CASCADE, related_name='to_profiles')
+
     status = models.IntegerField(choices=RELATIONSHIP_STATUSES)
 
 
-REQUEST_ACCEPTED = 1
-REQUEST_DENIED = 2
-REQUEST_PENDING = 3
-REQUEST_CANCELED = 4
-REQUEST_STATUSES = (
-    (REQUEST_ACCEPTED, "Accepted"),
-    (REQUEST_DENIED, "Denied"),
-    (REQUEST_PENDING, "Pending"),
-    (REQUEST_CANCELED, "Canceled"),
-)
-
-
 class FriendRequest(models.Model):
+    REQUEST_ACCEPTED = 1
+    REQUEST_DENIED = 2
+    REQUEST_PENDING = 3
+    REQUEST_CANCELED = 4
+    REQUEST_STATUSES = (
+        (REQUEST_ACCEPTED, "Accepted"),
+        (REQUEST_DENIED, "Denied"),
+        (REQUEST_PENDING, "Pending"),
+        (REQUEST_CANCELED, "Canceled"),
+    )
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
     created = models.DateTimeField(auto_now_add=True, editable=False)
-    from_profile = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name='senders')
-    to_profile = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name='receivers')
+
+    from_profile = models.ForeignKey(
+        Profile, on_delete=models.CASCADE, related_name='senders')
+
+    to_profile = models.ForeignKey(
+        Profile, on_delete=models.CASCADE, related_name='receivers')
+
     status = models.IntegerField(choices=REQUEST_STATUSES)
