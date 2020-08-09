@@ -49,6 +49,9 @@ class Profile(models.Model):
     def get_friends(self):
         return self.get_relationships(1)
 
+    def get_blocking(self):
+        return self.get_relationships(2)
+
     def is_blocked_by(self, profile):
         if self.get_related_to(2).filter(id=profile.id).exists():
             return True
@@ -130,6 +133,9 @@ class Profile(models.Model):
 
     def get_incoming_pending(self):
         return self.get_incoming_requests(3)
+
+    def get_outgoing_pending(self):
+        return self.get_outgoing_requests(3)
 
     def has_pending_request_to(self, profile):
         outgoing_pending = self.get_outgoing_requests(3)
