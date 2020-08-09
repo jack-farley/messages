@@ -12,9 +12,12 @@ class Profile(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
         related_name='profile')
 
+    # friends and blocked
     relationships = models.ManyToManyField(
         'self', through='Relationship', symmetrical=False,
         related_name='related_to')
+
+    # outgoing requests
     friend_requests = models.ManyToManyField(
         'self', through='FriendRequest', symmetrical=False,
         related_name='incoming_requests')
