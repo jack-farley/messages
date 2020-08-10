@@ -29,7 +29,13 @@ Messages is a simple API allowing users to send and receive messages.
                 "first_name": <first name>,
                 "last_name": <last name>
             }
-        
+
++ Response 400 (application/json)
+
+        Returned if the specified username is already taken, the passwords 
+        do not match, or fields are blank or missing.
+
+
 ## Login [/accounts/login/]
 
 ### Login to account [POST]
@@ -53,6 +59,21 @@ expires every 24 hours.
                 "refresh": <refresh token>,
                 "access": <access token>
             }
+            
++ Response 401 (application/json)
+
+    Returned if the username or password is incorrect.
+
+    + Body
+
+            {
+                "detail": "No active account found with the given credentials"
+            }
+            
++ Response 400 (application/json)
+
+        Returned if fields are blank or missing.
+
             
 # Group Profiles
 
