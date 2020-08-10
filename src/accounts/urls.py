@@ -10,7 +10,7 @@ from .views import (
 
 app_name = 'accounts'
 urlpatterns = [
-    path('sign_up/', SignUpView.as_view(), name='sign-up'),
+    path('signup/', SignUpView.as_view(), name='sign-up'),
     path('login/', LoginView.as_view(), name='login'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token-refresh'),
 ]

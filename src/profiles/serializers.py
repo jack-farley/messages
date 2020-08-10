@@ -48,9 +48,8 @@ class ProfileSerializer(DynamicModelSerializer):
                       ('blocking', 'incoming_requests', 'outgoing_requests',))
 
     username = serializers.CharField(source='user.username', read_only=True)
-    first_name = serializers.CharField(source='user.first_name',
-                                       read_only=True)
-    last_name = serializers.CharField(source='user.last_name', read_only=True)
+    first_name = serializers.CharField(source='user.first_name')
+    last_name = serializers.CharField(source='user.last_name')
 
     # friends = LimitedProfileSerializer(many=True, read_only=True,
     #                                    source='get_friends')
@@ -64,21 +63,20 @@ class ProfileSerializer(DynamicModelSerializer):
     # outgoing_requests = FriendRequestSerializer(many=True, read_only=True,
     #                                             source='get_outgoing_pending')
 
+    def update(self, instance, validated_data):
+        user = validated_data.get('user', None)
+        if user is not None:
+            first_name = user.pop('first_name', None)
+            last_name = user.pop('last_name', None)
+            if first_name is not None:
+                instance.user.first_name = first_name
+            if last_name is not None:
+                instance.user.last_name = last_name
+        instance.user.save(update_fields=('first_name', 'last_name',))
+        return instance
+
     class Meta:
         model = Profile
-        fields = ('username', 'first_name', 'last_name', 'friends',
-                  'blocking', 'incoming_requests', 'outgoing_requests',)
-
-    def update(self, instance, validated_data):
-        first_name = validated_data.pop('first_name', None)
-        last_name = validated_data.pop('last_name', None)
-        super(ProfileSerializer, self).update(instance, validated_data)
-        if first_name is not None:
-            instance.user.first_name = first_name
-            instance.user.save(update_fields=('first_name',))
-        if last_name is not None:
-            instance.user.last_name = last_name
-            instance.user.save(update_fields=('last_name',))
-        return instance
+        fields = ('username', 'first_name', 'last_name', )
 
 

@@ -22,11 +22,11 @@ class Profile(models.Model):
         related_name='incoming_requests')
 
     def __str__(self):
-        return f'{self.get_username()}'
+        return f'{self.user.username}'
 
     def get_absolute_url(self):
         return reverse('profiles:profiles-detail',
-                       kwargs={'username': self.get_username()})
+                       kwargs={'username': self.user.username})
 
     # GENERAL USER INFORMATION
 
