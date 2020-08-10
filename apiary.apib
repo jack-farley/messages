@@ -11,6 +11,9 @@ Messages is a simple API allowing users to send and receive messages.
 
 ### Create an Account [POST]
 
+Provide a username and password to signup for an account. Other user
+information can be provided or changed later.
+
 + Request (application/json)
     
         {
@@ -73,6 +76,50 @@ expires every 24 hours.
 + Response 400 (application/json)
 
         Returned if fields are blank or missing.
+        
+
+## Refresh Token [/accounts/token/refresh/]
+
+### Get a new access token [POST]
+
+Use the refresh token from login to get a new access token.
+
++ Request (application/json)
+
+    + Body
+    
+            refresh: <refresh token>
+            
++ Response 200 (application/json)
+
+    + Body
+
+            {
+                "access": <access token>
+            }
+            
++ Response 400 (application/json)
+
+    Returned the refresh token field is missing or blank.
+
+    + Body
+
+            {
+                "refresh": [
+                    "This field may not be blank."
+                ]
+            }
+        
++ Response 401 (application/json)
+
+    Returned when the provided refresh token is invalid or expired.
+
+    + Body
+
+            {
+                "detail": "Token is invalid or expired",
+                "code": "token_not_valid"
+            }
 
             
 # Group Profiles
@@ -81,11 +128,13 @@ expires every 24 hours.
 
 ### Get a user's profile [GET]
 
+Get information about a user's profile.
+
 + Request (application/json)
 
     + Headers
         
-            Authorization: <access token>
+            Authorization: Bearer <access token>
 
 + Response 200 (application/json)
 
@@ -95,4 +144,118 @@ expires every 24 hours.
                 "username": <username>,
                 "first_name": <first name>,
                 "last_name": <last name>
+            }
+            
++ Response 401 (application/json)
+
+    Returned if authentication credentials were not provided or if the
+    given token was invalid or expired.
+    
+    + Body
+
+            {
+                "detail": "Given token not valid for any token type",
+                "code": "token_not_valid",
+                "messages": [
+                    {
+                        "token_class": "AccessToken",
+                        "token_type": "access",
+                        "message": "Token is invalid or expired"
+                    }
+                ]
+            }
+            
++ Response 404 (application/json)
+
+    Returned if a user does not exist with the provided username.
+    
+    + Body
+
+            {
+                "detail": "Not found."
+            }
+            
+### Update a user's profile [PATCH]
+
+Update information about a users profile. Note that only an
+authenticated user can change information about their own profile.ng
+
++ Request (application/json)
+
+    Request should include in the body the fields to be updated and
+    their new values. If read-only fields are specified they will
+    not be changed.
+
+    + Headers
+        
+            Authorization: Bearer <access token>
+            
+    + Body
+    
+            {
+                "first_name": <Updated first name>,
+                "last_name": <Updated last name>
+            }
+            
++ Response 200 (application/json)
+
+    + Body
+
+            {
+                "username": <username>,
+                "first_name": <first name>,
+                "last_name": <last name>
+            }
+
++ Response 400 (application/json)
+    
+    Returned if a required field is blank.
+
+    + Body
+            
+            {
+                "first_name": [
+                    "This field may not be blank."
+                ]
+            }
+            
++ Response 401 (application/json)
+
+    Returned if authentication credentials were not provided or if the
+    given token was invalid or expired.
+    
+    + Body
+
+            {
+                "detail": "Given token not valid for any token type",
+                "code": "token_not_valid",
+                "messages": [
+                    {
+                        "token_class": "AccessToken",
+                        "token_type": "access",
+                        "message": "Token is invalid or expired"
+                    }
+                ]
+            }
+
++ Response 403 (application/json)
+
+    Returned if a user tries to update an account that is not their
+    own, i.e. the authentication credentials do not match the account
+    being updated.
+    
+    + Body
+    
+            {
+            "detail": "You do not have permission to perform this action."
+            }
+
++ Response 404 (application/json)
+
+    Returned if a user does not exist with the provided username.
+    
+    + Body
+
+            {
+                "detail": "Not found."
             }
