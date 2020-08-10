@@ -11,74 +11,67 @@ Messages is a simple API allowing users to send and receive messages.
 
 ### Create an Account [POST]
 
-+ Response 200 (application/json)
-
-        [
-            {
-                "question": "Favourite programming language?",
-                "published_at": "2015-08-05T08:40:51.620Z",
-                "choices": [
-                    {
-                        "choice": "Swift",
-                        "votes": 2048
-                    }, {
-                        "choice": "Python",
-                        "votes": 1024
-                    }, {
-                        "choice": "Objective-C",
-                        "votes": 512
-                    }, {
-                        "choice": "Ruby",
-                        "votes": 256
-                    }
-                ]
-            }
-        ]
-        
-## Login [/accounts/login/]
-
-### Create a New Question [POST]
-
-You may create your own question using this action. It takes a JSON
-object containing a question and a collection of answers in the
-form of choices.
-
 + Request (application/json)
-
+    
         {
-            "question": "Favourite programming language?",
-            "choices": [
-                "Swift",
-                "Python",
-                "Objective-C",
-                "Ruby"
-            ]
+            "username": <username>,
+            "password1": <password>,
+            "password2": <password>
         }
 
 + Response 201 (application/json)
 
-    + Headers
+    + Body
+    
+            {
+                "id": <user_id>,
+                "username": <username>,
+                "first_name": <first name>,
+                "last_name": <last name>
+            }
+        
+## Login [/accounts/login/]
 
-            Location: /questions/2
+### Login to account [POST]
+
+You must provide your username and pasword. In exchange you will receive
+access token, which expires every 5 minutes, and a refresh token, which
+expires every 24 hours.
+
++ Request (application/json)
+
+        {
+            "username": <username>,
+            "password": <password>
+        }
+
++ Response 200 (application/json)
 
     + Body
 
             {
-                "question": "Favourite programming language?",
-                "published_at": "2015-08-05T08:40:51.620Z",
-                "choices": [
-                    {
-                        "choice": "Swift",
-                        "votes": 0
-                    }, {
-                        "choice": "Python",
-                        "votes": 0
-                    }, {
-                        "choice": "Objective-C",
-                        "votes": 0
-                    }, {
-                        "choice": "Ruby",
-                        "votes": 0
-                    }
-                ]
+                "refresh": <refresh token>,
+                "access": <access token>
+            }
+            
+# Group Profiles
+
+## User profile [/{username}/]
+
+### Get a user's profile [GET]
+
++ Request (application/json)
+
+    + Headers
+        
+            Authorization: <access token>
+
++ Response 200 (application/json)
+
+    + Body
+        
+            {
+                "username": <username>,
+                "first_name": <first name>,
+                "last_name": <last name>
             }
