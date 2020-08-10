@@ -17,7 +17,6 @@ class Profile(models.Model):
         'self', through='Relationship', symmetrical=False,
         related_name='related_to')
 
-    # outgoing requests
     friend_requests = models.ManyToManyField(
         'self', through='FriendRequest', symmetrical=False,
         related_name='incoming_requests')
@@ -29,8 +28,7 @@ class Profile(models.Model):
         return reverse('profiles:profiles-detail',
                        kwargs={'username': self.get_username()})
 
-    def get_username(self):
-        return self.user.username
+    # GENERAL USER INFORMATION
 
     # RELATIONSHIPS
 

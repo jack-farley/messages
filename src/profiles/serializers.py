@@ -52,20 +52,33 @@ class ProfileSerializer(DynamicModelSerializer):
                                        read_only=True)
     last_name = serializers.CharField(source='user.last_name', read_only=True)
 
-    friends = LimitedProfileSerializer(many=True, read_only=True,
-                                       source='get_friends')
-
-    blocking = LimitedProfileSerializer(many=True, read_only=True,
-                                        source='get_blocking')
-
-    incoming_requests = FriendRequestSerializer(many=True, read_only=True,
-                                                source='get_incoming_pending')
-
-    outgoing_requests = FriendRequestSerializer(many=True, read_only=True,
-                                                source='get_outgoing_pending')
+    # friends = LimitedProfileSerializer(many=True, read_only=True,
+    #                                    source='get_friends')
+    #
+    # blocking = LimitedProfileSerializer(many=True, read_only=True,
+    #                                     source='get_blocking')
+    #
+    # incoming_requests = FriendRequestSerializer(many=True, read_only=True,
+    #                                             source='get_incoming_pending')
+    #
+    # outgoing_requests = FriendRequestSerializer(many=True, read_only=True,
+    #                                             source='get_outgoing_pending')
 
     class Meta:
         model = Profile
         fields = ('username', 'first_name', 'last_name', 'friends',
                   'blocking', 'incoming_requests', 'outgoing_requests',)
+
+    def update(self, instance, validated_data):
+        first_name = validated_data.pop('first_name', None)
+        last_name = validated_data.pop('last_name', None)
+        super(ProfileSerializer, self).update(instance, validated_data)
+        if first_name is not None:
+            instance.user.first_name = first_name
+            instance.user.save(update_fields=('first_name',))
+        if last_name is not None:
+            instance.user.last_name = last_name
+            instance.user.save(update_fields=('last_name',))
+        return instance
+
 
