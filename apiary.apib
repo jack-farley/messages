@@ -1,0 +1,77 @@
+FORMAT: 1A
+HOST: http://localhost:8000/
+
+# Messages
+
+Messages is a simple API allowing users to send and receive messages.
+
+# Group Authentication
+
+## Signup [/accounts/signup/]
+
+### Create an Account [POST]
+
++ Request (application/json)
+    
+        {
+            "username": <username>,
+            "password1": <password>,
+            "password2": <password>
+        }
+
++ Response 201 (application/json)
+
+    + Body
+    
+            {
+                "id": <user_id>,
+                "username": <username>,
+                "first_name": <first name>,
+                "last_name": <last name>
+            }
+        
+## Login [/accounts/login/]
+
+### Login to account [POST]
+
+You must provide your username and pasword. In exchange you will receive
+access token, which expires every 5 minutes, and a refresh token, which
+expires every 24 hours.
+
++ Request (application/json)
+
+        {
+            "username": <username>,
+            "password": <password>
+        }
+
++ Response 200 (application/json)
+
+    + Body
+
+            {
+                "refresh": <refresh token>,
+                "access": <access token>
+            }
+            
+# Group Profiles
+
+## User profile [/{username}/]
+
+### Get a user's profile [GET]
+
++ Request (application/json)
+
+    + Headers
+        
+            Authorization: <access token>
+
++ Response 200 (application/json)
+
+    + Body
+        
+            {
+                "username": <username>,
+                "first_name": <first name>,
+                "last_name": <last name>
+            }
