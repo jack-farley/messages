@@ -9,6 +9,7 @@ Messages is a simple API allowing users to send and receive messages.
 
 ## Signup [/accounts/signup/]
 
+
 ### Create an Account [POST]
 
 Provide a username and password to signup for an account. Other user
@@ -37,9 +38,12 @@ information can be provided or changed later.
 
         Returned if the specified username is already taken, the passwords 
         do not match, or fields are blank or missing.
+        
+    + Body
 
 
 ## Login [/accounts/login/]
+
 
 ### Login to account [POST]
 
@@ -65,20 +69,19 @@ expires every 24 hours.
             
 + Response 401 (application/json)
 
-    Returned if the username or password is incorrect.
-
+        Returned if the username or password is incorrect.
+        
     + Body
-
-            {
-                "detail": "No active account found with the given credentials"
-            }
-            
+ 
 + Response 400 (application/json)
 
         Returned if fields are blank or missing.
         
+    + Body
+
 
 ## Refresh Token [/accounts/token/refresh/]
+
 
 ### Get a new access token [POST]
 
@@ -100,31 +103,24 @@ Use the refresh token from login to get a new access token.
             
 + Response 400 (application/json)
 
-    Returned the refresh token field is missing or blank.
+        Returned the refresh token field is missing or blank.
 
     + Body
-
-            {
-                "refresh": [
-                    "This field may not be blank."
-                ]
-            }
-        
+  
 + Response 401 (application/json)
 
-    Returned when the provided refresh token is invalid or expired.
-
+        Returned when the provided refresh token is invalid or expired.
+        
     + Body
 
-            {
-                "detail": "Token is invalid or expired",
-                "code": "token_not_valid"
-            }
 
-            
-# Group Profiles
+# Group Users
 
-## User profile [/{username}/]
+## Profiles [/{username}/]
+
++ Parameters
+    + username (string) - Username of the desired user.
+
 
 ### Get a user's profile [GET]
 
@@ -148,33 +144,18 @@ Get information about a user's profile.
             
 + Response 401 (application/json)
 
-    Returned if authentication credentials were not provided or if the
-    given token was invalid or expired.
-    
+        Returned if authentication credentials were not provided or if the
+        given token was invalid or expired.
+        
     + Body
 
-            {
-                "detail": "Given token not valid for any token type",
-                "code": "token_not_valid",
-                "messages": [
-                    {
-                        "token_class": "AccessToken",
-                        "token_type": "access",
-                        "message": "Token is invalid or expired"
-                    }
-                ]
-            }
-            
 + Response 404 (application/json)
 
-    Returned if a user does not exist with the provided username.
-    
+        Returned if a user does not exist with the provided username.
+        
     + Body
 
-            {
-                "detail": "Not found."
-            }
-            
+
 ### Update a user's profile [PATCH]
 
 Update information about a users profile. Note that only an
@@ -209,53 +190,121 @@ authenticated user can change information about their own profile.ng
 
 + Response 400 (application/json)
     
-    Returned if a required field is blank.
-
+        Returned if a required field is blank.
+        
     + Body
-            
-            {
-                "first_name": [
-                    "This field may not be blank."
-                ]
-            }
-            
+
 + Response 401 (application/json)
 
-    Returned if authentication credentials were not provided or if the
-    given token was invalid or expired.
-    
+        Returned if authentication credentials were not provided or if the
+        given token was invalid or expired.
+        
     + Body
-
-            {
-                "detail": "Given token not valid for any token type",
-                "code": "token_not_valid",
-                "messages": [
-                    {
-                        "token_class": "AccessToken",
-                        "token_type": "access",
-                        "message": "Token is invalid or expired"
-                    }
-                ]
-            }
 
 + Response 403 (application/json)
 
-    Returned if a user tries to update an account that is not their
-    own, i.e. the authentication credentials do not match the account
-    being updated.
-    
+        Returned if a user tries to update an account that is not their
+        own, i.e. the authentication credentials do not match the account
+        being updated.
+        
     + Body
+
++ Response 404
     
-            {
-            "detail": "You do not have permission to perform this action."
-            }
+        Returned if a user does not exist with the provided username.
+        
+    + Body
+
+    
+## Friends [/{username}/friends/]
+
++ Parameters
+    + username (string) - Username of the desired user.
+
+
+### Get a user's friends [GET]
+
+Get a list of a user's friends
+
++ Request (application/json)
+
+    + Headers
+        
+            Authorization: Bearer <access token>
+
++ Response 200 (application/json)
+
+    + Body
+
+            [
+                {
+                    "username": <username>,
+                    "first_name": <first name>,
+                    "last_name": <last name>.
+                    ...
+                },
+                <SERIALIZED PROFILE>,
+                ...
+            ]
+
++ Response 401 (application/json)
+
+        Returned if authentication credentials were not provided or if the
+        given token was invalid or expired.
+        
+    + Body
 
 + Response 404 (application/json)
 
-    Returned if a user does not exist with the provided username.
+        Returned if a user does not exist with the provided username.
+        
+    + Body
+
+
+### Remove a friend [DELETE]
+
+Remove a user from the spcified user's friends list.
+
++ Request (application/json)
+
+    + Headers
+        
+            Authorization: Bearer <access token>
+            
+    + Body
+    
+            {
+                "username": username
+            }
+
++ Response 204
+
+        Returned if the user is succesfully removed as a friend.
     
     + Body
 
-            {
-                "detail": "Not found."
-            }
++ Response 400 (application/json)
+
+        Returned if the two users were not friends.
+
+    + Body
+    
++ Response 401 (application/json)
+
+        Returned if authentication credentials were not provided or if the
+        given token was invalid or expired.ocu
+        
+    + Body
+
++ Response 403 (application/json)
+
+        Returned if the authentication credentials do not match the user
+        who would be removing a friend.
+        
+    + Body
+
++ Response 404 (application/json)
+
+        Returned if a user does not exist with the provided username.
+        
+    + Body
