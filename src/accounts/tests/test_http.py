@@ -51,3 +51,22 @@ class AuthenticationTest(APITestCase):
         self.assertEqual(payload_data['username'], user.username)
         self.assertEqual(payload_data['first_name'], user.first_name)
         self.assertEqual(payload_data['last_name'], user.last_name)
+
+    def test_refresh(self):
+        user = create_user()
+        response = self.client.post(reverse('accounts:login'), data={
+            'username': user.username,
+            'password': PASSWORD,
+        })
+
+        self.assertIsNotNone(response.data['access'])
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertIsNotNone(response.data['refresh'])
+        refresh = response.data['refresh']
+
+        response = self.client.post(reverse('accounts:token-refresh'), data={
+            'refresh': refresh,
+        })
+
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertIsNotNone(response.data['access'])
