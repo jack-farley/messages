@@ -163,6 +163,9 @@ class Profile(models.Model):
                 to_profile=profile,
                 status=3,
             )
+            return request
+
+        return None
 
     def cancel_request(self, profile):
         request = FriendRequest.objects.filter(
@@ -216,12 +219,12 @@ class Relationship(models.Model):
 
 class FriendRequest(models.Model):
     REQUEST_ACCEPTED = 1
-    REQUEST_DENIED = 2
+    REQUEST_REJECTED = 2
     REQUEST_PENDING = 3
     REQUEST_CANCELED = 4
     REQUEST_STATUSES = (
         (REQUEST_ACCEPTED, "Accepted"),
-        (REQUEST_DENIED, "Denied"),
+        (REQUEST_REJECTED, "Rejected"),
         (REQUEST_PENDING, "Pending"),
         (REQUEST_CANCELED, "Canceled"),
     )

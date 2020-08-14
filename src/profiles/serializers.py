@@ -18,28 +18,28 @@ class DynamicModelSerializer(serializers.ModelSerializer):
                 self.fields.pop(field_name)
 
 
-class RelationshipSerializer(serializers.ModelSerializer):
+# class RelationshipSerializer(serializers.ModelSerializer):
+#
+#     class Meta:
+#         model = Relationship
+#         fields = ('id', 'created', 'from_profile', 'to_profile', 'status')
+#
+#
+# class FriendRequestSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = FriendRequest
+#         fields = ('id', 'created', 'from_profile', 'to_profile', 'status')
 
-    class Meta:
-        model = Relationship
-        fields = ('id', 'created', 'from_profile', 'to_profile', 'status')
 
-
-class FriendRequestSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = FriendRequest
-        fields = ('id', 'created', 'from_profile', 'to_profile', 'status')
-
-
-class LimitedProfileSerializer(serializers.ModelSerializer):
-    username = serializers.CharField(source='user.username', read_only=True)
-    first_name = serializers.CharField(source='user.first_name',
-                                       read_only=True)
-    last_name = serializers.CharField(source='user.last_name', read_only=True)
-
-    class Meta:
-        model = Profile
-        fields = ('username', 'first_name', 'last_name',)
+# class LimitedProfileSerializer(serializers.ModelSerializer):
+#     username = serializers.CharField(source='user.username', read_only=True)
+#     first_name = serializers.CharField(source='user.first_name',
+#                                        read_only=True)
+#     last_name = serializers.CharField(source='user.last_name', read_only=True)
+#
+#     class Meta:
+#         model = Profile
+#         fields = ('username', 'first_name', 'last_name',)
 
 
 class ProfileSerializer(DynamicModelSerializer):
@@ -78,5 +78,23 @@ class ProfileSerializer(DynamicModelSerializer):
     class Meta:
         model = Profile
         fields = ('username', 'first_name', 'last_name', )
+
+
+class RequestSerializer(serializers.ModelSerializer):
+
+    from_user = serializers.SlugRelatedField(
+        read_only=True,
+        slug_field='user.username'
+    )
+
+    to_user = serializers.SlugRelatedField(
+        read_only=True,
+        slug_field='user.username'
+    )
+
+    class Meta:
+        model = FriendRequest
+        fields = ('created', 'from_user', 'to_user', 'status')
+
 
 

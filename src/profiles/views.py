@@ -7,8 +7,13 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 
 from .shortcuts import get_profile_or_404
-from .serializers import ProfileSerializer
-from .exceptions import UsernameNotProvided, UsersNotFriends
+from .serializers import ProfileSerializer, RequestSerializer
+from .exceptions import (
+    UsernameNotProvided,
+    UsersNotFriends,
+    UsersAlreadyFriends,
+    AlreadyPendingRequest,
+)
 
 
 class ProfileView(APIView):
@@ -56,6 +61,28 @@ class FriendsView(APIView):
         queryset = profile.get_friends()
 
         serializer = ProfileSerializer(queryset, many=True, fields=fields)
+
+    def post(self, request, username=None, format=None):
+        profile = self.get_object(username)
+
+        if profile != request.user.profile:
+            raise PermissionDenied
+
+        other_username = request.data.get('username', None)
+        if other_username is None:
+            raise UsernameNotProvided
+        other_profile = get_profile_or_404(username)
+
+        if profile.is_friends_with(other_profile):
+            raise UsersAlreadyFriends
+
+        if profile.has_pending_request_from(other_profile) \
+                or profile.has_pending_request_to(other_profile):
+            raise AlreadyPendingRequest
+
+        request = profile.send_request(other_profile)
+        serializer = RequestSerializer(instance=request)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     def delete(self, request, username=None, format=None):
         profile = self.get_object(username)
