@@ -118,9 +118,6 @@ Use the refresh token from login to get a new access token.
 
 ## Profiles [/{username}/]
 
-+ Parameters
-    + username (string) - Username of the desired user.
-
 
 ### Get a user's profile [GET]
 
@@ -218,9 +215,6 @@ authenticated user can change information about their own profile.ng
     
 ## Friends [/{username}/friends/]
 
-+ Parameters
-    + username (string) - Username of the desired user.
-
 
 ### Get a user's friends [GET]
 
@@ -261,9 +255,9 @@ Get a list of a user's friends
     + Body
 
 
-### Remove a friend [DELETE]
+### Send a friend request [POST]
 
-Remove a user from the spcified user's friends list.
+Sends a friend request to the user specified in the request body.
 
 + Request (application/json)
 
@@ -277,6 +271,63 @@ Remove a user from the spcified user's friends list.
                 "username": username
             }
 
++ Response 200 (application/json)
+
+    + Body
+        
+            {
+                "created": <date-time>,
+                "from_user": <username>,
+                "to_user": <username>,
+                "status": <pending/accepted/rejected/canceled>
+            }
+
++ Response 400 (application/json)
+
+        Returned if the two users are already friends or if there already
+        exists a pending friend request betweeen the two users, in either
+        direction. Also returned if required fields were missing.
+
+    + Body
+
++ Response 401 (application/json)
+
+        Returned if authentication credentials were not provided or if the
+        given token was invalid or expired.
+        
+    + Body
+
++ Response 403 (application/json)
+
+        Returned if the authentication credentials do not match the user
+        sending the friend request.
+        
+    + Body
+
++ Response 404 (application/json)
+
+        Returned if a user does not exist with the username provided for 
+        either the sender or receiver.
+        
+    + Body
+
+
+### Remove a friend [DELETE]
+
+Remove a user from the spcified user's friends list.
+
++ Request (application/json)
+
+    + Headers
+        
+            Authorization: Bearer <access token>
+            
+    + Body
+    
+            {
+                "username": <username>
+            }
+
 + Response 204
 
         Returned if the user is succesfully removed as a friend.
@@ -285,14 +336,15 @@ Remove a user from the spcified user's friends list.
 
 + Response 400 (application/json)
 
-        Returned if the two users were not friends.
+        Returned if the two users were not friends, or if required fields
+        were empty or missing.
 
     + Body
     
 + Response 401 (application/json)
 
         Returned if authentication credentials were not provided or if the
-        given token was invalid or expired.ocu
+        given token was invalid or expired.
         
     + Body
 
@@ -306,5 +358,177 @@ Remove a user from the spcified user's friends list.
 + Response 404 (application/json)
 
         Returned if a user does not exist with the provided username.
+        
+    + Body
+
+
+## Requests [/{username}/requests/]
+
+
+### Get a user's friend requests [GET]
+
+Gets the the user's pending friend requests. Returns incoming friend requests 
+if "outgoing" field is omitted or false, and outgoing requests otherwise.
+
++ Request (application/json)
+
+    + Headers
+        
+            Authorization: Bearer <access token>
+            
+    + Body
+            
+            {
+                "outgoing": <True/False>
+            }
+
++ Response 200 (application/json)
+
+    + Body
+        
+            [
+                {
+                    "created": <date-time>,
+                    "from_user": <username>,
+                    "to_user": <username>,
+                    "status": <pending/accepted/rejected/canceled>
+                },
+                <SERIALIZED REQUEST>,
+                ...
+            ]
+
++ Response 401 (application/json)
+
+        Returned if authentication credentials were not provided or if the
+        given token was invalid or expired.
+        
+    + Body
+
++ Response 403 (application/json)
+
+        Returned if the authentication credentials do not match the user
+        whose friend requests are being requested.
+        
+    + Body
+            
++ Response 404 (application/json)
+
+        Returned either specified user does not exist.
+        
+    + Body
+
+
+### Respond to a friend request [POST]
+
+Accept or reject an incoming friend request from the user specified
+in the request body.
+
++ Request (application/json)
+
+    + Headers
+        
+            Authorization: Bearer <access token>
+            
+    + Body
+    
+            {
+                "username": <username>,
+                "accepted": <True/False>
+            }
+            
++ Response 200 (application/json)
+
+    + Body
+
+            {
+                "created": <date-time>,
+                "from_user": <username>,
+                "to_user": <username>,
+                "status": <pending/accepted/rejected/canceled>
+            }
+
++ Response 400 (application/json)
+
+        Returned if required fields are missing or blank, or if there does
+        not exist a pending friend request from the user specified in the
+        request body to the user specified in the url.
+
+    + Body
+
++ Response 401 (application/json)
+
+        Returned if authentication credentials were not provided or if the
+        given token was invalid or expired.
+        
+    + Body
+
++ Response 403 (application/json)
+
+        Returned if the authentication credentials do not match the user
+        responding to the request.
+        
+    + Body
+
++ Response 404 (application/json)
+
+        Returned if a user does not exist with the username provided for 
+        either the sender or receiver.
+        
+    + Body
+
+
+### Cancel a friend request [DELETE]
+
+Cancel an outgoing friend request to the user specified in the request body.
+
++ Request (application/json)
+
+    + Headers
+        
+            Authorization: Bearer <access token>
+            
+    + Body
+    
+            {
+                "username": <username>
+            }
+
++ Response 200 (application/json)
+
+    + Body
+
+            {
+                "created": <date-time>,
+                "from_user": <username>,
+                "to_user": <username>,
+                "status": <pending/accepted/rejected/canceled>
+            }
+
++ Response 400 (application/json)
+
+        Returned if required fields are missing or blank, or if there does
+        not exist a pending friend request from the user specified in the
+        url to the user specified in the request body.
+
+    + Body
+
++ Response 401 (application/json)
+
+        Returned if authentication credentials were not provided or if the
+        given token was invalid or expired.
+        
+    + Body
+
++ Response 403 (application/json)
+
+        Returned if the authentication credentials do not match the user
+        canceling the request.
+        
+    + Body
+
++ Response 404 (application/json)
+
+        Returned if a user does not exist with the username provided for 
+        either the sender or receiver.
         
     + Body
