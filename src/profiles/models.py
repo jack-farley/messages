@@ -175,6 +175,7 @@ class Profile(models.Model):
         if request is not None:
             request.status = 4
             request.save()
+        return request
 
     def approve_request(self, profile):
         request = FriendRequest.objects.filter(
@@ -185,6 +186,7 @@ class Profile(models.Model):
             request.status = 1
             request.save()
             self.add_friend(profile)
+        return request
 
     def deny_request(self, profile):
         request = FriendRequest.objects.filter(
@@ -194,6 +196,7 @@ class Profile(models.Model):
         if request is not None:
             request.status = 2
             request.save()
+        return request
 
 
 class Relationship(models.Model):

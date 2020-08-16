@@ -6,13 +6,14 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 
-from .shortcuts import get_profile_or_404
+from .shortcuts import get_profile_or_404, get_other_profile
 from .serializers import ProfileSerializer, RequestSerializer
 from .exceptions import (
-    UsernameNotProvided,
     UsersNotFriends,
     UsersAlreadyFriends,
     AlreadyPendingRequest,
+    MissingRequestAccepted,
+    RequestDoesNotExist,
 )
 
 
@@ -62,16 +63,15 @@ class FriendsView(APIView):
 
         serializer = ProfileSerializer(queryset, many=True, fields=fields)
 
+        return Response(serializer.data)
+
     def post(self, request, username=None, format=None):
         profile = self.get_object(username)
 
         if profile != request.user.profile:
             raise PermissionDenied
 
-        other_username = request.data.get('username', None)
-        if other_username is None:
-            raise UsernameNotProvided
-        other_profile = get_profile_or_404(username)
+        other_profile = get_other_profile(request)
 
         if profile.is_friends_with(other_profile):
             raise UsersAlreadyFriends
@@ -90,13 +90,86 @@ class FriendsView(APIView):
         if profile != request.user.profile:
             raise PermissionDenied
 
-        other_username = request.data.get('username', None)
-        if other_username is None:
-            raise UsernameNotProvided
-        other_profile = get_profile_or_404(other_username)
+        other_profile = get_other_profile(request)
 
         if profile.is_friends_with(other_profile):
             profile.remove_friend(other_profile)
             return Response(status=status.HTTP_204_NO_CONTENT)
         else:
             raise UsersNotFriends
+
+
+class RequestsView(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def get_object(self, username):
+        return get_profile_or_404(username)
+
+    def get(self, request, username=None, format=None):
+        profile = self.get_object(username)
+
+        if profile != request.user.profile:
+            raise PermissionDenied
+
+        outgoing = request.data.get('outgoing', False)
+
+        if outgoing:
+            queryset = profile.get_outgoing_pending()
+        else:
+            queryset = profile.get_incoming_pending()
+
+        serializer = RequestSerializer(queryset, many=True)
+
+        return Response(serializer.data)
+
+    def post(self, request, username=None, format=None):
+        profile = self.get_object(username)
+
+        if profile != request.user.profile:
+            raise PermissionDenied
+
+        other_profile = get_other_profile(request)
+
+        if profile.has_pending_request_from(other_profile):
+
+            # Get accepted field
+            accepted = request.data.get('accepted', None)
+            if accepted is None:
+                raise MissingRequestAccepted
+
+            # Approve or deny the request
+            if accepted:
+                request = profile.approve_request(other_profile)
+            else:
+                request = profile.deny_request(other_profile)
+
+            # Send response
+            if request is None:
+                return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+            serializer = RequestSerializer(request)
+            return Response(serializer.data)
+
+        raise RequestDoesNotExist
+
+    def delete(self, request, username=None, format=None):
+        profile = self.get_object(username)
+
+        if profile != request.user.profile:
+            raise PermissionDenied
+
+        other_profile = get_other_profile(request)
+
+        if profile.has_pending_request_to(other_profile):
+
+            # Cancel the request
+            request = profile.cancel_request(other_profile)
+
+            # Send response
+            if request is None:
+                return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+            serializer = RequestSerializer(request)
+            return Response(serializer.data)
+
+        raise RequestDoesNotExist

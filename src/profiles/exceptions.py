@@ -26,3 +26,17 @@ class AlreadyPendingRequest(APIException):
     status_code = 400
     default_detail = 'There is already a pending friend request between you' \
                      'and the user to whom you are sending a request.'
+    default_code = 'already_request'
+
+
+class MissingRequestAccepted(APIException):
+    status_code = 400
+    default_detail = 'You must set accepted to True to accept the request or' \
+                     'False to reject it. Accepted field is required.'
+    default_code = 'missing_response'
+
+
+class RequestDoesNotExist(APIException):
+    status_code = 400
+    default_detail = 'No pending request exists with the given parameters.'
+    default_code = 'no_request'
