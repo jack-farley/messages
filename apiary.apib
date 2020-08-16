@@ -370,6 +370,13 @@ Remove a user from the spcified user's friends list.
 Gets the the user's pending friend requests. Returns incoming friend requests 
 if "outgoing" field is omitted or false, and outgoing requests otherwise.
 
+Request statuses are as follows:
+
+-   1 - Accepted
+-   2 - Rejected
+-   3 - Pending
+-   4 - Canceled
+
 + Request (application/json)
 
     + Headers
@@ -391,7 +398,7 @@ if "outgoing" field is omitted or false, and outgoing requests otherwise.
                     "created": <date-time>,
                     "from_user": <username>,
                     "to_user": <username>,
-                    "status": <pending/accepted/rejected/canceled>
+                    "status": <1/2/3/4>
                 },
                 <SERIALIZED REQUEST>,
                 ...
