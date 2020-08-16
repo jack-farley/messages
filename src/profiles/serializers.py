@@ -18,50 +18,13 @@ class DynamicModelSerializer(serializers.ModelSerializer):
                 self.fields.pop(field_name)
 
 
-# class RelationshipSerializer(serializers.ModelSerializer):
-#
-#     class Meta:
-#         model = Relationship
-#         fields = ('id', 'created', 'from_profile', 'to_profile', 'status')
-#
-#
-# class FriendRequestSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = FriendRequest
-#         fields = ('id', 'created', 'from_profile', 'to_profile', 'status')
-
-
-# class LimitedProfileSerializer(serializers.ModelSerializer):
-#     username = serializers.CharField(source='user.username', read_only=True)
-#     first_name = serializers.CharField(source='user.first_name',
-#                                        read_only=True)
-#     last_name = serializers.CharField(source='user.last_name', read_only=True)
-#
-#     class Meta:
-#         model = Profile
-#         fields = ('username', 'first_name', 'last_name',)
-
-
 class ProfileSerializer(DynamicModelSerializer):
-    PUBLIC_FIELDS = ('username', 'first_name', 'last_name', 'friends',)
-    PRIVATE_FIELDS = (PUBLIC_FIELDS +
-                      ('blocking', 'incoming_requests', 'outgoing_requests',))
+    PUBLIC_FIELDS = ('username', 'first_name', 'last_name',)
+    PRIVATE_FIELDS = PUBLIC_FIELDS
 
-    username = serializers.CharField(source='user.username', read_only=True)
+    username = serializers.CharField(source='get_username', read_only=True)
     first_name = serializers.CharField(source='user.first_name')
     last_name = serializers.CharField(source='user.last_name')
-
-    # friends = LimitedProfileSerializer(many=True, read_only=True,
-    #                                    source='get_friends')
-    #
-    # blocking = LimitedProfileSerializer(many=True, read_only=True,
-    #                                     source='get_blocking')
-    #
-    # incoming_requests = FriendRequestSerializer(many=True, read_only=True,
-    #                                             source='get_incoming_pending')
-    #
-    # outgoing_requests = FriendRequestSerializer(many=True, read_only=True,
-    #                                             source='get_outgoing_pending')
 
     def update(self, instance, validated_data):
         user = validated_data.get('user', None)
@@ -82,15 +45,11 @@ class ProfileSerializer(DynamicModelSerializer):
 
 class RequestSerializer(serializers.ModelSerializer):
 
-    from_user = serializers.SlugRelatedField(
-        read_only=True,
-        slug_field='user.username'
-    )
+    from_user = serializers.CharField(source='from_profile.get_username',
+                                      read_only=True)
 
-    to_user = serializers.SlugRelatedField(
-        read_only=True,
-        slug_field='user.username'
-    )
+    to_user = serializers.CharField(source='to_profile.get_username',
+                                    read_only=True)
 
     class Meta:
         model = FriendRequest

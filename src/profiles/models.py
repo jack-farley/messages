@@ -17,10 +17,6 @@ class Profile(models.Model):
         'self', through='Relationship', symmetrical=False,
         related_name='related_to')
 
-    friend_requests = models.ManyToManyField(
-        'self', through='FriendRequest', symmetrical=False,
-        related_name='incoming_requests')
-
     def __str__(self):
         return f'{self.user.username}'
 
@@ -29,6 +25,9 @@ class Profile(models.Model):
                        kwargs={'username': self.user.username})
 
     # GENERAL USER INFORMATION
+
+    def get_username(self):
+        return self.user.username
 
     # RELATIONSHIPS
 
@@ -114,20 +113,22 @@ class Profile(models.Model):
             self.add_relationship(profile, 1)
 
     def remove_friend(self, profile):
-        self.remove_relationship(profile, 2)
+        self.remove_relationship(profile, 1)
+
+    #
 
     # FRIEND REQUESTS
 
     # Getting information about friend requests
     def get_incoming_requests(self, status):
         return self.incoming_requests.filter(
-            senders__status=status,
-            senders__to_profile=self)
+            status=status
+        )
 
     def get_outgoing_requests(self, status):
-        return self.friend_requests.filter(
-            receivers__status=status,
-            receivers__from_profile=self)
+        return self.outgoing_requests.filter(
+            status=status
+        )
 
     def get_incoming_pending(self):
         return self.get_incoming_requests(3)
@@ -136,14 +137,14 @@ class Profile(models.Model):
         return self.get_outgoing_requests(3)
 
     def has_pending_request_to(self, profile):
-        outgoing_pending = self.get_outgoing_requests(3)
-        if outgoing_pending.filter(id=profile.id).exists():
+        outgoing_pending = self.get_outgoing_pending()
+        if outgoing_pending.filter(to_profile=profile).exists():
             return True
         return False
 
     def has_pending_request_from(self, profile):
         incoming_pending = self.get_incoming_pending()
-        if incoming_pending.filter(id=profile.id).exists():
+        if incoming_pending.filter(from_profile=profile).exists():
             return True
         return False
 
@@ -237,9 +238,9 @@ class FriendRequest(models.Model):
     created = models.DateTimeField(auto_now_add=True, editable=False)
 
     from_profile = models.ForeignKey(
-        Profile, on_delete=models.CASCADE, related_name='senders')
+        Profile, on_delete=models.CASCADE, related_name='outgoing_requests')
 
     to_profile = models.ForeignKey(
-        Profile, on_delete=models.CASCADE, related_name='receivers')
+        Profile, on_delete=models.CASCADE, related_name='incoming_requests')
 
     status = models.IntegerField(choices=REQUEST_STATUSES)
