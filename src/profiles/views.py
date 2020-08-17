@@ -17,6 +17,8 @@ from .exceptions import (
 )
 
 
+# Getting profiles and updating your own
+
 class ProfileView(APIView):
     permission_classes = (IsAuthenticated,)
 
@@ -47,6 +49,8 @@ class ProfileView(APIView):
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
+# Getting and removing friends, and sending friend requests
 
 class FriendsView(APIView):
     permission_classes = (IsAuthenticated,)
@@ -98,6 +102,9 @@ class FriendsView(APIView):
         else:
             raise UsersNotFriends
 
+
+# Getting incoming and outgoing requests, responding to them, and canceling
+# outgoing requests
 
 class RequestsView(APIView):
     permission_classes = (IsAuthenticated,)
