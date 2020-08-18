@@ -539,3 +539,148 @@ Cancel an outgoing friend request to the user specified in the request body.
         either the sender or receiver.
         
     + Body
+
+
+## Blocking [/{username}/blocks/]
+
+### Get blocked users [GET]
+
+Get the list of users that you have blocked.
+
++ Request (application/json)
+
+    + Headers
+        
+            Authorization: Bearer <access token>
+
++ Response 200 (application/json)
+
+    + Body
+
+            [
+                {
+                    "username": <username>,
+                    "first_name": <first name>,
+                    "last_name": <last name>.
+                    ...
+                },
+                <SERIALIZED PROFILE>,
+                ...
+            ]
+
++ Response 401 (application/json)
+
+        Returned if authentication credentials were not provided or if the
+        given token was invalid or expired.
+        
+    + Body
+
++ Response 403 (application/json)
+
+        Returned if the authentication credentials do not match the specified
+        user.
+        
+    + Body
+
++ Response 404 (application/json)
+
+        Returned if a user does not exist with the provided username.
+        
+    + Body
+
+### Block a user [POST]
+
+Block a specified user.
+
++ Request (application/json)
+
+    + Headers
+        
+            Authorization: Bearer <access token>
+            
+    + Body
+    
+            {
+                "username": <username>
+            }
+
++ Response 204 (application/json)
+
+    Returned if the user was succesfully blocked.
+
+    + Body
+
++ Response 400 (application/json)
+
+        Returned if if required fields were empty or missing.
+
+    + Body
+    
++ Response 401 (application/json)
+
+        Returned if authentication credentials were not provided or if the
+        given token was invalid or expired.
+        
+    + Body
+
++ Response 403 (application/json)
+
+        Returned if the authentication credentials do not match the user
+        sending the block request.
+        
+    + Body
+
++ Response 404 (application/json)
+
+        Returned if a user does not exist with the provided username.
+        
+    + Body
+
+### Unblock a user [DELETE]
+
+Unblock a user.
+
++ Request (application/json)
+
+    + Headers
+        
+            Authorization: Bearer <access token>
+            
+    + Body
+    
+            {
+                "username": <username>
+            }
+
++ Response 204
+
+        Returned if the user is succesfully removed as a friend.
+    
+    + Body
+
++ Response 400 (application/json)
+
+        Returned if the specified user was not blocked, or if required fields
+        were empty or missing.
+
+    + Body
+    
++ Response 401 (application/json)
+
+        Returned if authentication credentials were not provided or if the
+        given token was invalid or expired.
+        
+    + Body
+
++ Response 403 (application/json)
+
+        Returned if the authentication credentials do not match the user
+        attempting to unblock someone.
+        
+    + Body
+
++ Response 404 (application/json)
+
+        Returned if a user does not exist with the provided username.
+        
+    + Body
