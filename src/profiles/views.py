@@ -6,7 +6,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 
-from .shortcuts import get_profile_or_404, get_other_profile
+from .shortcuts import check_my_profile, get_other_profile
 from .serializers import ProfileSerializer, RequestSerializer
 from .exceptions import (
     UsersNotFriends,
@@ -14,6 +14,8 @@ from .exceptions import (
     AlreadyPendingRequest,
     MissingRequestAccepted,
     RequestDoesNotExist,
+    AlreadyBlocking,
+    NotBlocking,
 )
 
 
@@ -22,27 +24,23 @@ from .exceptions import (
 class ProfileView(APIView):
     permission_classes = (IsAuthenticated,)
 
-    def get_object(self, username):
-        return get_profile_or_404(username)
-
     def get(self, request, username=None, format=None):
-        profile = self.get_object(username)
+        my_profile = self.request.user.profile
+        requested_profile = get_other_profile(my_profile, username)
 
-        if self.request.user.profile == profile:
-            fields = ProfileSerializer.PRIVATE_FIELDS
-        else:
+        if requested_profile != my_profile:
             fields = ProfileSerializer.PUBLIC_FIELDS
+        else:
+            fields = ProfileSerializer.PRIVATE_FIELDS
 
-        serializer = ProfileSerializer(profile, fields=fields)
+        serializer = ProfileSerializer(requested_profile, fields=fields)
         return Response(serializer.data)
 
     def patch(self, request, username=None, format=None):
-        profile = self.get_object(username)
+        my_profile = check_my_profile(self.request.user.profile, username)
 
-        if profile != request.user.profile:
-            raise PermissionDenied
-
-        serializer = ProfileSerializer(instance=profile, data=request.data,
+        serializer = ProfileSerializer(instance=my_profile,
+                                       data=request.data,
                                        partial=True)
         if serializer.is_valid():
             serializer.save()
@@ -55,49 +53,41 @@ class ProfileView(APIView):
 class FriendsView(APIView):
     permission_classes = (IsAuthenticated,)
 
-    def get_object(self, username):
-        return get_profile_or_404(username)
-
     def get(self, request, username=None, format=None):
-        profile = self.get_object(username)
+        my_profile = self.request.user.profile
+        requested_profile = get_other_profile(my_profile, username)
 
-        fields = ProfileSerializer.PRIVATE_FIELDS
+        queryset = requested_profile.get_friends()
+        filtered_queryset = my_profile.filter_blockers(queryset)
 
-        queryset = profile.get_friends()
-
-        serializer = ProfileSerializer(queryset, many=True, fields=fields)
+        serializer = ProfileSerializer(filtered_queryset, many=True,
+                                       fields=ProfileSerializer.PUBLIC_FIELDS)
 
         return Response(serializer.data)
 
     def post(self, request, username=None, format=None):
-        profile = self.get_object(username)
+        my_profile = check_my_profile(self.request.user.profile, username)
+        other_profile = \
+            get_other_profile(my_profile, request.data.get('username', None))
 
-        if profile != request.user.profile:
-            raise PermissionDenied
-
-        other_profile = get_other_profile(request)
-
-        if profile.is_friends_with(other_profile):
+        if my_profile.is_friends_with(other_profile):
             raise UsersAlreadyFriends
 
-        if profile.has_pending_request_from(other_profile) \
-                or profile.has_pending_request_to(other_profile):
+        if my_profile.has_pending_request_from(other_profile) \
+                or my_profile.has_pending_request_to(other_profile):
             raise AlreadyPendingRequest
 
-        request = profile.send_request(other_profile)
+        request = my_profile.send_request(other_profile)
         serializer = RequestSerializer(instance=request)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def delete(self, request, username=None, format=None):
-        profile = self.get_object(username)
+        my_profile = check_my_profile(self.request.user.profile, username)
+        other_profile = \
+            get_other_profile(my_profile, request.data.get('username', None))
 
-        if profile != request.user.profile:
-            raise PermissionDenied
-
-        other_profile = get_other_profile(request)
-
-        if profile.is_friends_with(other_profile):
-            profile.remove_friend(other_profile)
+        if my_profile.is_friends_with(other_profile):
+            my_profile.remove_friend(other_profile)
             return Response(status=status.HTTP_204_NO_CONTENT)
         else:
             raise UsersNotFriends
@@ -109,35 +99,26 @@ class FriendsView(APIView):
 class RequestsView(APIView):
     permission_classes = (IsAuthenticated,)
 
-    def get_object(self, username):
-        return get_profile_or_404(username)
-
     def get(self, request, username=None, format=None):
-        profile = self.get_object(username)
-
-        if profile != request.user.profile:
-            raise PermissionDenied
+        my_profile = check_my_profile(self.request.user.profile, username)
 
         outgoing = request.data.get('outgoing', False)
 
         if outgoing:
-            queryset = profile.get_outgoing_pending()
+            queryset = my_profile.get_outgoing_pending()
         else:
-            queryset = profile.get_incoming_pending()
+            queryset = my_profile.get_incoming_pending()
 
         serializer = RequestSerializer(queryset, many=True)
 
         return Response(serializer.data)
 
     def post(self, request, username=None, format=None):
-        profile = self.get_object(username)
+        my_profile = check_my_profile(self.request.user.profile, username)
+        other_profile = \
+            get_other_profile(my_profile, request.data.get('username', None))
 
-        if profile != request.user.profile:
-            raise PermissionDenied
-
-        other_profile = get_other_profile(request)
-
-        if profile.has_pending_request_from(other_profile):
+        if my_profile.has_pending_request_from(other_profile):
 
             # Get accepted field
             accepted = request.data.get('accepted', None)
@@ -146,9 +127,9 @@ class RequestsView(APIView):
 
             # Approve or deny the request
             if accepted:
-                request = profile.approve_request(other_profile)
+                request = my_profile.approve_request(other_profile)
             else:
-                request = profile.deny_request(other_profile)
+                request = my_profile.deny_request(other_profile)
 
             # Send response
             if request is None:
@@ -160,17 +141,14 @@ class RequestsView(APIView):
         raise RequestDoesNotExist
 
     def delete(self, request, username=None, format=None):
-        profile = self.get_object(username)
+        my_profile = check_my_profile(self.request.user.profile, username)
+        other_profile = \
+            get_other_profile(my_profile, request.data.get('username', None))
 
-        if profile != request.user.profile:
-            raise PermissionDenied
-
-        other_profile = get_other_profile(request)
-
-        if profile.has_pending_request_to(other_profile):
+        if my_profile.has_pending_request_to(other_profile):
 
             # Cancel the request
-            request = profile.cancel_request(other_profile)
+            request = my_profile.cancel_request(other_profile)
 
             # Send response
             if request is None:
@@ -180,3 +158,41 @@ class RequestsView(APIView):
             return Response(serializer.data)
 
         raise RequestDoesNotExist
+
+
+class BlockingView(APIView):
+
+    def get(self, request, username, format=None):
+        my_profile = check_my_profile(self.request.user.profile, username)
+
+        queryset = my_profile.filter_blockers(my_profile.get_blocking())
+
+        serializer = ProfileSerializer(queryset, many=True,
+                                       fields=ProfileSerializer.PUBLIC_FIELDS)
+
+        return Response(serializer.data)
+
+    def post(self, request, username, format=None):
+        my_profile = check_my_profile(self.request.user.profile, username)
+        other_profile = \
+            get_other_profile(my_profile, request.data.get('username', None))
+
+        if my_profile.is_blocking(other_profile):
+            raise AlreadyBlocking
+
+        my_profile.block(other_profile)
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def delete(self, request, username, format=None):
+
+        my_profile = check_my_profile(self.request.user.profile, username)
+        other_profile = \
+            get_other_profile(my_profile, request.data.get('username', None))
+
+        if not my_profile.is_blocking(other_profile):
+            raise NotBlocking
+
+        my_profile.unblock(other_profile)
+
+        return Response(status=status.HTTP_204_NO_CONTENT)

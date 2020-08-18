@@ -106,6 +106,12 @@ class Profile(models.Model):
     def unblock(self, profile):
         self.remove_relationship(profile, 2, False)
 
+    def filter_blockers(self, queryset):
+        for profile in queryset:
+            if profile.is_blocking(self):
+                queryset = queryset.objects.exclude(id=profile.id)
+        return queryset
+
     def add_friend(self, profile):
         if not self.is_blocking(profile) \
                 and not self.is_blocked_by(profile) \
