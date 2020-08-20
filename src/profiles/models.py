@@ -35,13 +35,13 @@ class Profile(models.Model):
 
     def get_relationships(self, status):
         return self.relationships.filter(
-            to_profiles__status=status,
-            to_profiles__from_profile=self)
+            to_profile__status=status,
+            to_profile__from_profile=self)
 
     def get_related_to(self, status):
         return self.related_to.filter(
-            from_profiles__status=status,
-            from_profiles__to_profile=self)
+            from_profile__status=status,
+            from_profile__to_profile=self)
 
     def get_friends(self):
         return self.get_relationships(1)
@@ -219,10 +219,10 @@ class Relationship(models.Model):
     created = models.DateTimeField(auto_now_add=True, editable=False)
 
     from_profile = models.ForeignKey(
-        Profile, on_delete=models.CASCADE, related_name='from_profiles')
+        Profile, on_delete=models.CASCADE, related_name='from_profile')
 
     to_profile = models.ForeignKey(
-        Profile, on_delete=models.CASCADE, related_name='to_profiles')
+        Profile, on_delete=models.CASCADE, related_name='to_profile')
 
     status = models.IntegerField(choices=RELATIONSHIP_STATUSES)
 

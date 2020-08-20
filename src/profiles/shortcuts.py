@@ -15,13 +15,13 @@ def get_profile(username):
 
 
 def get_profile_or_404(username):
-    user = get_profile(username)
-    if user is None:
+    profile = get_profile(username)
+    if profile is None:
         raise Http404(MESSAGE_404)
-    return user.profile
+    return profile
 
 
-def check_my_profile(username, auth_profile):
+def check_my_profile(auth_profile, username):
     my_profile = get_profile_or_404(username)
 
     if auth_profile != my_profile:

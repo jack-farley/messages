@@ -28,7 +28,6 @@ class AuthenticationTest(APITestCase):
         })
         user = get_user_model().objects.last()
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        self.assertEqual(response.data['id'], user.id)
         self.assertEqual(response.data['username'], user.username)
         self.assertEqual(response.data['first_name'], user.first_name)
         self.assertEqual(response.data['last_name'], user.last_name)
@@ -47,7 +46,6 @@ class AuthenticationTest(APITestCase):
 
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertIsNotNone(response.data['refresh'])
-        self.assertEqual(payload_data['id'], user.id)
         self.assertEqual(payload_data['username'], user.username)
         self.assertEqual(payload_data['first_name'], user.first_name)
         self.assertEqual(payload_data['last_name'], user.last_name)
