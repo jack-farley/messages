@@ -5,7 +5,7 @@ from django.contrib.auth import get_user_model
 from django.shortcuts import reverse
 from django.utils.html import format_html
 
-from .models import Profile, Relationship
+from .models import Profile, Relationship, FriendRequest
 
 
 def show_url(url_obj, text):
@@ -18,7 +18,61 @@ def show_url(url_obj, text):
                        )
 
 
+class RequestInline(admin.StackedInline):
+    verbose_name = 'Request'
+    model = FriendRequest
+    extra = 0
+
+    fields = ('created',)
+
+    def get_readonly_fields(self, request, obj=None):
+        return 'created',
+
+    def has_add_permission(self, request, obj):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def get_queryset(self, request):
+        qs = super(RequestInline, self).get_queryset(request)
+        return qs.filter(status=3)
+
+
+class IncomingRequestInline(RequestInline):
+    verbose_name_plural = 'Incoming Requests'
+    fk_name = 'to_profile'
+
+    def show_profile_url(self, obj):
+        return show_url(obj.from_profile, obj.from_profile.user.username)
+
+    show_profile_url.short_description = 'Profile'
+
+    fields = RequestInline.fields + ('show_profile_url',)
+
+    def get_readonly_fields(self, request, obj=None):
+        return super(IncomingRequestInline, self) \
+                   .get_readonly_fields(request, obj) + ('show_profile_url',)
+
+
+class OutgoingRequestInline(RequestInline):
+    verbose_name_plural = 'Outgoing Requests'
+    fk_name = 'from_profile'
+
+    def show_profile_url(self, obj):
+        return show_url(obj.to_profile, obj.to_profile.user.username)
+
+    show_profile_url.short_description = 'Profile'
+
+    fields = RequestInline.fields + ('show_profile_url',)
+
+    def get_readonly_fields(self, request, obj=None):
+        return super(OutgoingRequestInline, self) \
+                   .get_readonly_fields(request, obj) + ('show_profile_url',)
+
+
 class RelationshipInline(admin.StackedInline):
+    verbose_name = 'Relationship'
     model = Relationship
     fk_name = 'from_profile'
     extra = 0
@@ -33,8 +87,8 @@ class RelationshipInline(admin.StackedInline):
     def get_readonly_fields(self, request, obj=None):
         return 'show_to_profile_url',
 
-    def delete_model(self, request, obj):
-        obj.to_profile.remove_friend(obj.from_profile)
+    def has_add_permission(self, request, obj):
+        return False
 
 
 class FriendsInline(RelationshipInline):
@@ -44,6 +98,9 @@ class FriendsInline(RelationshipInline):
         qs = super(FriendsInline, self).get_queryset(request)
         return qs.filter(status=1)
 
+    def delete_model(self, request, obj):
+        obj.to_profile.remove_friend(obj.from_profile)
+
 
 class BlockingInline(RelationshipInline):
     verbose_name_plural = 'Blocking'
@@ -52,9 +109,17 @@ class BlockingInline(RelationshipInline):
         qs = super(BlockingInline, self).get_queryset(request)
         return qs.filter(status=2)
 
+    def delete_model(self, request, obj):
+        obj.to_profile.unblock(obj.from_profile)
+
 
 class ProfileAdmin(admin.ModelAdmin):
-    inlines = (FriendsInline, BlockingInline)
+    inlines = (
+        FriendsInline,
+        BlockingInline,
+        IncomingRequestInline,
+        OutgoingRequestInline
+    )
 
     fieldsets = [
         ('User', {'fields': ['show_user_url_with_username', ]})

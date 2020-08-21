@@ -226,6 +226,12 @@ class Relationship(models.Model):
 
     status = models.IntegerField(choices=RELATIONSHIP_STATUSES)
 
+    def __str__(self):
+        if self.status == 1:
+            return 'Friendship'
+        else:
+            return 'Blocking'
+
 
 class FriendRequest(models.Model):
     REQUEST_ACCEPTED = 1
@@ -250,3 +256,7 @@ class FriendRequest(models.Model):
         Profile, on_delete=models.CASCADE, related_name='incoming_requests')
 
     status = models.IntegerField(choices=REQUEST_STATUSES)
+
+    def __str__(self):
+        return f'Friend request from {self.from_profile.user.username} to ' \
+               f'{self.to_profile.user.username}.'
