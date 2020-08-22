@@ -118,6 +118,9 @@ Use the refresh token from login to get a new access token.
 
 ## Profiles [/{username}/]
 
++ Parameters
+    + username (required, string) - A path variable that is required for a valid URL.
+
 
 ### Get a user's profile [GET]
 
@@ -214,6 +217,9 @@ authenticated user can change information about their own profile.ng
 
     
 ## Friends [/{username}/friends/]
+
++ Parameters
+    + username (required, string) - A path variable that is required for a valid URL.
 
 
 ### Get a user's friends [GET]
@@ -362,32 +368,30 @@ Remove a user from the spcified user's friends list.
     + Body
 
 
-## Requests [/{username}/requests/]
+## Requests [/{username}/requests/{?outgoing}]
 
++ Parameters
+    + username (required, string) - A path variable that is required for a valid URL.
 
 ### Get a user's friend requests [GET]
 
 Gets the the user's pending friend requests. Returns incoming friend requests 
-if "outgoing" field is omitted or false, and outgoing requests otherwise.
+if "outgoing" parameter is omitted or false, and outgoing requests otherwise.
 
 Request statuses are as follows:
-
 -   1 - Accepted
 -   2 - Rejected
 -   3 - Pending
 -   4 - Canceled
+
++ Parameters
+    + outgoing (optional, boolean) - Set to True to retreive outgoing requests. Defaults to False.
 
 + Request (application/json)
 
     + Headers
         
             Authorization: Bearer <access token>
-            
-    + Body
-            
-            {
-                "outgoing": <True/False>
-            }
 
 + Response 200 (application/json)
 
@@ -542,6 +546,9 @@ Cancel an outgoing friend request to the user specified in the request body.
 
 
 ## Blocking [/{username}/blocking/]
+
++ Parameters
+    + username (required, string) - A path variable that is required for a valid URL.
 
 ### Get blocked users [GET]
 
