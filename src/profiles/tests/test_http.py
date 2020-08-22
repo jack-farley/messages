@@ -1,3 +1,4 @@
+import json
 from rest_framework.test import APITestCase
 from rest_framework import status
 from django.contrib.auth import get_user_model
@@ -20,15 +21,23 @@ class HttpProfileTest(APITestCase):
     def setUp(self):
         self.user1 = create_user('user1', 'bob', 'smith')
         self.user2 = create_user('user2', 'jim', 'walsh')
-        response = self.client.post(reverse('accounts:login'), data={
-            'username': self.user1.username,
-            'password': PASSWORD,
-        })
+        response = self.client.post(
+            reverse('accounts:login'),
+            data=json.dumps({
+                'username': self.user1.username,
+                'password': PASSWORD,
+            }),
+            content_type='application/json'
+        )
         self.access1 = response.data['access']
-        response = self.client.post(reverse('accounts:login'), data={
-            'username': self.user2.username,
-            'password': PASSWORD,
-        })
+        response = self.client.post(
+            reverse('accounts:login'),
+            data=json.dumps({
+                'username': self.user2.username,
+                'password': PASSWORD,
+            }),
+            content_type='application/json'
+        )
         self.access2 = response.data['access']
 
     def test_get_profile_unauthorized(self):
@@ -69,11 +78,12 @@ class HttpProfileTest(APITestCase):
             reverse('profiles:profile',
                     kwargs={'username': self.user1.username}),
             HTTP_AUTHORIZATION=f'Bearer {self.access1}',
-            data={
+            data=json.dumps({
                 "username": "not_bob",
                 "first_name": new_first_name,
                 "last_name": new_last_name,
-            }
+            }),
+            content_type='application/json'
         )
 
         self.assertEqual(status.HTTP_200_OK, response.status_code)
@@ -88,11 +98,12 @@ class HttpProfileTest(APITestCase):
             reverse('profiles:profile',
                     kwargs={'username': self.user2.username}),
             HTTP_AUTHORIZATION=f'Bearer {self.access1}',
-            data={
+            data=json.dumps({
                 "username": "not_bob",
                 "first_name": new_first_name,
                 "last_name": new_last_name,
-            }
+            }),
+            content_type='application/json'
         )
 
         self.assertEqual(status.HTTP_403_FORBIDDEN, response.status_code)
@@ -102,24 +113,36 @@ class HttpFriendsTest(APITestCase):
 
     def setUp(self):
         self.user1 = create_user('user1', 'bob', 'smith')
-        response = self.client.post(reverse('accounts:login'), data={
-            'username': self.user1.username,
-            'password': PASSWORD,
-        })
+        response = self.client.post(
+            reverse('accounts:login'),
+            data=json.dumps({
+                'username': self.user1.username,
+                'password': PASSWORD,
+            }),
+            content_type='application/json'
+        )
         self.access1 = response.data['access']
 
         self.user2 = create_user('user2', 'jim', 'walsh')
-        response = self.client.post(reverse('accounts:login'), data={
-            'username': self.user2.username,
-            'password': PASSWORD,
-        })
+        response = self.client.post(
+            reverse('accounts:login'),
+            data=json.dumps({
+                'username': self.user2.username,
+                'password': PASSWORD,
+            }),
+            content_type='application/json'
+        )
         self.access2 = response.data['access']
 
         self.user3 = create_user('user3', 'johnny', 'fisher')
-        response = self.client.post(reverse('accounts:login'), data={
-            'username': self.user3.username,
-            'password': PASSWORD,
-        })
+        response = self.client.post(
+            reverse('accounts:login'),
+            data=json.dumps({
+                'username': self.user3.username,
+                'password': PASSWORD,
+            }),
+            content_type='application/json'
+        )
         self.access3 = response.data['access']
 
         # Setup Info
@@ -149,9 +172,10 @@ class HttpFriendsTest(APITestCase):
             reverse('profiles:friends',
                     kwargs={'username': self.user1.username}),
             HTTP_AUTHORIZATION=f'Bearer {self.access1}',
-            data={
+            data=json.dumps({
                 "username": f"{self.user3.username}"
-            },
+            }),
+            content_type='application/json'
         )
 
         request = response.data
@@ -180,10 +204,8 @@ class HttpFriendsTest(APITestCase):
         response3 = self.client.get(
             reverse('profiles:requests',
                     kwargs={'username': self.user1.username}),
+            data={'outgoing': '1'},
             HTTP_AUTHORIZATION=f'Bearer {self.access1}',
-            data={
-                "outgoing": True
-            }
         )
 
         outgoing_requests = response3.data
@@ -199,11 +221,8 @@ class HttpFriendsTest(APITestCase):
         response = self.client.get(
             reverse('profiles:requests',
                     kwargs={'username': self.user2.username}),
+            data={'outgoing': '1'},
             HTTP_AUTHORIZATION=f'Bearer {self.access2}',
-            data={
-                "outgoing": True
-            },
-            CONTENT_TYPE='application/json'
         )
 
         outgoing_requests = response.data
@@ -215,16 +234,13 @@ class HttpFriendsTest(APITestCase):
         self.assertEqual(outgoing_requests[0]['status'], 3)
 
     # Check that user3 has an incoming request from user2
-    def test_incoming_requests(self):
+    def test_get_incoming_requests(self):
         response = self.client.get(
             reverse('profiles:requests',
                     kwargs={'username': self.user3.username}),
+            data={'outgoing': '0'},
             HTTP_AUTHORIZATION=f'Bearer {self.access3}',
-            data={
-                "outgoing": False
-            }
         )
-
         incoming_requests = response.data
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(len(incoming_requests), 1)
@@ -240,10 +256,11 @@ class HttpFriendsTest(APITestCase):
             reverse('profiles:requests',
                     kwargs={'username': self.user3.username}),
             HTTP_AUTHORIZATION=f'Bearer {self.access3}',
-            data={
+            data=json.dumps({
                 "username": f"{self.user2.username}",
                 "accepted": True
-            }
+            }),
+            content_type='application/json'
         )
 
         request = response.data
@@ -287,10 +304,11 @@ class HttpFriendsTest(APITestCase):
             reverse('profiles:requests',
                     kwargs={'username': self.user3.username}),
             HTTP_AUTHORIZATION=f'Bearer {self.access3}',
-            data={
+            data=json.dumps({
                 "username": f"{self.user2.username}",
                 "accepted": False
-            }
+            }),
+            content_type='application/json'
         )
 
         request = response.data
@@ -331,9 +349,10 @@ class HttpFriendsTest(APITestCase):
             reverse('profiles:friends',
                     kwargs={'username': self.user1.username}),
             HTTP_AUTHORIZATION=f'Bearer {self.access1}',
-            data={
+            data=json.dumps({
                 "username": f"{self.user2.username}",
-            }
+            }),
+            content_type='application/json'
         )
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
 
@@ -363,8 +382,6 @@ class HttpFriendsTest(APITestCase):
 
 # TODO:
 # 1. test_cancel_request
-# 2. Problem with declined request coming back as accepted.
-# 3. Problem with 'outgoing' field not going through in request body.
 
 class HttpBlockingTest(APITestCase):
 

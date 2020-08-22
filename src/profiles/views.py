@@ -16,6 +16,7 @@ from .exceptions import (
     RequestDoesNotExist,
     AlreadyBlocking,
     NotBlocking,
+    InvalidURL,
 )
 
 
@@ -102,9 +103,15 @@ class RequestsView(APIView):
     def get(self, request, username=None, format=None):
         my_profile = check_my_profile(self.request.user.profile, username)
 
-        outgoing = request.data.get('outgoing', False)
+        outgoing_param = request.query_params.get('outgoing', '0')
+        if outgoing_param == '1':
+            outgoing = True
+        elif outgoing_param == '0':
+            outgoing = False
+        else:
+            raise InvalidURL
 
-        if outgoing:
+        if outgoing is True:
             queryset = my_profile.get_outgoing_pending()
         else:
             queryset = my_profile.get_incoming_pending()

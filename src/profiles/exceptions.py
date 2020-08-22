@@ -52,3 +52,9 @@ class NotBlocking(APIException):
     status_code = 400
     default_detail = 'You are not blocking the specified user.'
     default_code = 'not_blocking'
+
+
+class InvalidURL(APIException):
+    status_code = 400
+    default_detail = 'The URL submitted in your request is invalid.'
+    default_code = 'invalid_url'
