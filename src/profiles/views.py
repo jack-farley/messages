@@ -14,6 +14,7 @@ from .exceptions import (
     AlreadyPendingRequest,
     MissingRequestAccepted,
     RequestDoesNotExist,
+    BlockingUser,
     AlreadyBlocking,
     NotBlocking,
     InvalidURL,
@@ -70,6 +71,9 @@ class FriendsView(APIView):
         my_profile = check_my_profile(self.request.user.profile, username)
         other_profile = \
             get_other_profile(my_profile, request.data.get('username', None))
+
+        if my_profile.is_blocking(other_profile):
+            raise BlockingUser
 
         if my_profile.is_friends_with(other_profile):
             raise UsersAlreadyFriends
@@ -168,6 +172,7 @@ class RequestsView(APIView):
 
 
 class BlockingView(APIView):
+    permission_classes = (IsAuthenticated,)
 
     def get(self, request, username, format=None):
         my_profile = check_my_profile(self.request.user.profile, username)

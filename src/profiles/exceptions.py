@@ -42,6 +42,12 @@ class RequestDoesNotExist(APIException):
     default_code = 'no_request'
 
 
+class BlockingUser(APIException):
+    status_code = 400
+    default_detail = 'You are currently blocking the specified user.'
+    default_code = 'blocking'
+
+
 class AlreadyBlocking(APIException):
     status_code = 400
     default_detail = 'You are already blocking the specified user.'

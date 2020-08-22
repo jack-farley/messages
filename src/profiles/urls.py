@@ -12,5 +12,5 @@ urlpatterns = [
     path('<str:username>/', ProfileView.as_view(), name='profile'),
     path('<str:username>/friends/', FriendsView.as_view(), name='friends'),
     path('<str:username>/requests/', RequestsView.as_view(), name='requests'),
-    path('<str:username>/blocking/', BlockingView.as_view(), name='blocks'),
+    path('<str:username>/blocking/', BlockingView.as_view(), name='blocking'),
 ]

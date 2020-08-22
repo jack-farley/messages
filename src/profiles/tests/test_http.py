@@ -377,40 +377,339 @@ class HttpFriendsTest(APITestCase):
         self.assertEqual(len(response2.data), 0)
 
     def test_cancel_request(self):
-        pass  # TODO
+        response = self.client.delete(
+            reverse('profiles:requests',
+                    kwargs={'username': self.user2.username}),
+            HTTP_AUTHORIZATION=f'Bearer {self.access2}',
+            data=json.dumps({
+                "username": f"{self.user3.username}"
+            }),
+            content_type='application/json'
+        )
 
+        request = response.data
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(request['from_user'], self.user2.username)
+        self.assertEqual(request['to_user'], self.user3.username)
+        self.assertEqual(request['status'], 4)
 
-# TODO:
-# 1. test_cancel_request
+        # Check that they are not friends
+
+        # Check that user2 is not friends with user3
+        response2 = self.client.get(
+            reverse('profiles:friends',
+                    kwargs={'username': self.user2.username}),
+            HTTP_AUTHORIZATION=f'Bearer {self.access2}'
+        )
+
+        friends = response2.data
+        self.assertEqual(status.HTTP_200_OK, response2.status_code)
+        self.assertEqual(len(friends), 1)
+        self.assertEqual(friends[0]['username'], self.user1.username)
+        self.assertEqual(friends[0]['first_name'], self.user1.first_name)
+        self.assertEqual(friends[0]['last_name'], self.user1.last_name)
+
+        # Check that user3 is not friends with user2
+        response3 = self.client.get(
+            reverse('profiles:friends',
+                    kwargs={'username': self.user3.username}),
+            HTTP_AUTHORIZATION=f'Bearer {self.access3}'
+        )
+
+        friends = response3.data
+        self.assertEqual(status.HTTP_200_OK, response3.status_code)
+        self.assertEqual(len(friends), 0)
+
+        # Check that there is no more requests
+
+        # Make sure user3 no longer has an incoming request
+        response4 = self.client.get(
+            reverse('profiles:requests',
+                    kwargs={'username': self.user3.username}),
+            data={'outgoing': '0'},
+            HTTP_AUTHORIZATION=f'Bearer {self.access3}',
+        )
+        incoming_requests = response4.data
+        self.assertEqual(status.HTTP_200_OK, response4.status_code)
+        self.assertEqual(len(incoming_requests), 0)
+
+        # Make sure user2 no longer has an outgoing request
+        response5 = self.client.get(
+            reverse('profiles:requests',
+                    kwargs={'username': self.user2.username}),
+            data={'outgoing': '1'},
+            HTTP_AUTHORIZATION=f'Bearer {self.access2}',
+        )
+
+        outgoing_requests = response5.data
+        self.assertEqual(status.HTTP_200_OK, response5.status_code)
+        self.assertEqual(len(outgoing_requests), 0)
+
 
 class HttpBlockingTest(APITestCase):
 
     def setUp(self):
-        pass  # TODO
+        self.user1 = create_user('user1', 'bob', 'smith')
+        response = self.client.post(
+            reverse('accounts:login'),
+            data=json.dumps({
+                'username': self.user1.username,
+                'password': PASSWORD,
+            }),
+            content_type='application/json'
+        )
+        self.access1 = response.data['access']
+
+        self.user2 = create_user('user2', 'jim', 'walsh')
+        response = self.client.post(
+            reverse('accounts:login'),
+            data=json.dumps({
+                'username': self.user2.username,
+                'password': PASSWORD,
+            }),
+            content_type='application/json'
+        )
+        self.access2 = response.data['access']
+
+        self.user3 = create_user('user3', 'johnny', 'fisher')
+        response = self.client.post(
+            reverse('accounts:login'),
+            data=json.dumps({
+                'username': self.user3.username,
+                'password': PASSWORD,
+            }),
+            content_type='application/json'
+        )
+        self.access3 = response.data['access']
+
+        # Setup Info
+        # user1 and user2 are friends.
+        # user2 has a pending friend request to user3.
+        # user3 is blocking user1.
+        self.user1.profile.add_friend(self.user2.profile)
+        self.user2.profile.send_request(self.user3.profile)
+        self.user3.profile.block(self.user1.profile)
 
     def test_get_blocking(self):
-        pass  # TODO
+        response = self.client.get(
+            reverse('profiles:blocking',
+                    kwargs={'username': self.user3.username}),
+            HTTP_AUTHORIZATION=f'Bearer {self.access3}'
+        )
 
-    def test_block(self):
-        pass  # TODO
+        blocking = response.data
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(len(blocking), 1)
+        self.assertEqual(blocking[0]['username'], self.user1.username)
+        self.assertEqual(blocking[0]['first_name'], self.user1.first_name)
+        self.assertEqual(blocking[0]['last_name'], self.user1.last_name)
 
     def test_block_end_friendship(self):
-        pass  # TODO
+        response = self.client.post(
+            reverse('profiles:blocking',
+                    kwargs={'username': self.user1.username}),
+            HTTP_AUTHORIZATION=f'Bearer {self.access1}',
+            data=json.dumps({
+                'username': self.user2.username
+            }),
+            content_type='application/json'
+        )
+
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        # Check that user1 is now blocking user2
+        response = self.client.get(
+            reverse('profiles:blocking',
+                    kwargs={'username': self.user1.username}),
+            HTTP_AUTHORIZATION=f'Bearer {self.access1}'
+        )
+
+        blocking = response.data
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(len(blocking), 1)
+        self.assertEqual(blocking[0]['username'], self.user2.username)
+        self.assertEqual(blocking[0]['first_name'], self.user2.first_name)
+        self.assertEqual(blocking[0]['last_name'], self.user2.last_name)
+
+        # Check that user1 is no longer friend with user2
+        response2 = self.client.get(
+            reverse('profiles:friends',
+                    kwargs={'username': self.user1.username}),
+            HTTP_AUTHORIZATION=f'Bearer {self.access1}'
+        )
+
+        self.assertEqual(status.HTTP_200_OK, response2.status_code)
+        self.assertEqual(len(response2.data), 0)
+
+        # Check that user2 is no longer friends with user1
+        response3 = self.client.get(
+            reverse('profiles:friends',
+                    kwargs={'username': self.user2.username}),
+            HTTP_AUTHORIZATION=f'Bearer {self.access2}'
+        )
+
+        self.assertEqual(status.HTTP_200_OK, response3.status_code)
+        self.assertEqual(len(response3.data), 0)
 
     def test_block_end_requests(self):
-        pass  # TODO
+        response = self.client.post(
+            reverse('profiles:blocking',
+                    kwargs={'username': self.user2.username}),
+            HTTP_AUTHORIZATION=f'Bearer {self.access2}',
+            data=json.dumps({
+                'username': self.user3.username
+            }),
+            content_type='application/json'
+        )
+
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        # Check that user2 is now blocking user3
+        response2 = self.client.get(
+            reverse('profiles:blocking',
+                    kwargs={'username': self.user2.username}),
+            HTTP_AUTHORIZATION=f'Bearer {self.access2}'
+        )
+
+        blocking = response2.data
+        self.assertEqual(status.HTTP_200_OK, response2.status_code)
+        self.assertEqual(len(blocking), 1)
+        self.assertEqual(blocking[0]['username'], self.user3.username)
+        self.assertEqual(blocking[0]['first_name'], self.user3.first_name)
+        self.assertEqual(blocking[0]['last_name'], self.user3.last_name)
+
+        # Make sure user3 no longer has an incoming request
+        response3 = self.client.get(
+            reverse('profiles:requests',
+                    kwargs={'username': self.user3.username}),
+            data={'outgoing': '0'},
+            HTTP_AUTHORIZATION=f'Bearer {self.access3}',
+        )
+        incoming_requests = response3.data
+        self.assertEqual(status.HTTP_200_OK, response3.status_code)
+        self.assertEqual(len(incoming_requests), 0)
+
+        # Make sure user2 no longer has an outgoing request
+        response4 = self.client.get(
+            reverse('profiles:requests',
+                    kwargs={'username': self.user2.username}),
+            data={'outgoing': '1'},
+            HTTP_AUTHORIZATION=f'Bearer {self.access2}',
+        )
+
+        outgoing_requests = response4.data
+        self.assertEqual(status.HTTP_200_OK, response4.status_code)
+        self.assertEqual(len(outgoing_requests), 0)
 
     def test_blocked_profile_search(self):
-        pass  # TODO
+        # Check that user1 cannot find user3's profile
+        response = self.client.get(
+            reverse('profiles:profile',
+                    kwargs={'username': self.user3.username}),
+            HTTP_AUTHORIZATION=f'Bearer {self.access1}'
+        )
+
+        self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
 
     def test_blocked_friend_request(self):
-        pass  # TODO
+        # Check that user1 cannot send a friend request to user3
+        response = self.client.post(
+            reverse('profiles:friends',
+                    kwargs={'username': self.user1.username}),
+            HTTP_AUTHORIZATION=f'Bearer {self.access1}',
+            data=json.dumps({
+                'username': self.user3.username
+            }),
+            content_type='application/json'
+        )
+
+        self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
 
     def test_blocked_block(self):
-        pass  # TODO
+        # Check that user1 cannot block user3
+        response = self.client.post(
+            reverse('profiles:blocking',
+                    kwargs={'username': self.user1.username}),
+            HTTP_AUTHORIZATION=f'Bearer {self.access1}',
+            data=json.dumps({
+                'username': self.user3.username
+            }),
+            content_type='application/json'
+        )
+
+        self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
+
+    def test_blocking_friend_request(self):
+        # Check that user3 cannot send a friend request to user1
+        response = self.client.post(
+            reverse('profiles:friends',
+                    kwargs={'username': self.user3.username}),
+            HTTP_AUTHORIZATION=f'Bearer {self.access3}',
+            data=json.dumps({
+                'username': self.user1.username
+            }),
+            content_type='application/json'
+        )
+
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+        # Make sure there is no request
+
+        # Make sure user1 does not have an incoming request
+        response1 = self.client.get(
+            reverse('profiles:requests',
+                    kwargs={'username': self.user1.username}),
+            data={'outgoing': '0'},
+            HTTP_AUTHORIZATION=f'Bearer {self.access1}',
+        )
+        incoming_requests = response1.data
+        self.assertEqual(status.HTTP_200_OK, response1.status_code)
+        self.assertEqual(len(incoming_requests), 0)
+
+        # Make sure user3 does not have an outgoing request
+        response2 = self.client.get(
+            reverse('profiles:requests',
+                    kwargs={'username': self.user3.username}),
+            data={'outgoing': '1'},
+            HTTP_AUTHORIZATION=f'Bearer {self.access3}',
+        )
+
+        outgoing_requests = response2.data
+        self.assertEqual(status.HTTP_200_OK, response2.status_code)
+        self.assertEqual(len(outgoing_requests), 0)
 
     def test_unblock(self):
-        pass  # TODO
+        response = self.client.delete(
+            reverse('profiles:blocking',
+                    kwargs={'username': self.user3.username}),
+            HTTP_AUTHORIZATION=f'Bearer {self.access3}',
+            data=json.dumps({
+                'username': self.user1.username
+            }),
+            content_type='application/json'
+        )
 
-# TODO:
-# 1. Blocking tests.
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        # check that user3 is no longer blocking user1
+        response2 = self.client.get(
+            reverse('profiles:blocking',
+                    kwargs={'username': self.user3.username}),
+            HTTP_AUTHORIZATION=f'Bearer {self.access3}'
+        )
+
+        blocking = response2.data
+        self.assertEqual(status.HTTP_200_OK, response2.status_code)
+        self.assertEqual(len(blocking), 0)
+
+        # Check that user1 can now get user3's profile
+        response = self.client.get(
+            reverse('profiles:profile',
+                    kwargs={'username': self.user3.username}),
+            HTTP_AUTHORIZATION=f'Bearer {self.access1}'
+        )
+
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(response.data['username'], self.user3.username)
+        self.assertEqual(response.data['first_name'], self.user3.first_name)
+        self.assertEqual(response.data['last_name'], self.user3.last_name)
